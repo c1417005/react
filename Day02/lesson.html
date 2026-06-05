@@ -74,9 +74,9 @@ console.log(fruits[1]); // "みかん"
 console.log(fruits.length); // 3 （要素の個数。() は付けない＝プロパティ）</code></pre>
 
 <h3>オブジェクト（object）= 名前付きの箱</h3>
-<pre><code>const user = { name: "Soufu", age: 20 };
+<pre><code>const user = { name: "Taro", age: 20 };
 // 取り出すときは「キー（名前）」を使う。
-console.log(user.name); // "Soufu"
+console.log(user.name); // "Taro"
 console.log(user.age);  // 20</code></pre>
 
 <div class="note">
@@ -126,7 +126,7 @@ console.log(third); // "blue"</code></pre>
 
 <p>オブジェクトは<strong>「キー名」で対応</strong>します。順番は関係ありません。</p>
 
-<pre><code>const user = { name: "Soufu", age: 20, city: "Kanazawa" };
+<pre><code>const user = { name: "Taro", age: 20, city: "Tokyo" };
 
 // 今までの書き方
 const name = user.name;
@@ -135,7 +135,7 @@ const age  = user.age;
 // 分割代入（左辺を「オブジェクトの形」にする）
 const { name, age } = user;
 //      ↑ user の中の name キー・age キーを同じ名前の変数に取り出す
-console.log(name); // "Soufu"
+console.log(name); // "Taro"
 console.log(age);  // 20</code></pre>
 
 <div class="why">
@@ -152,20 +152,20 @@ function Profile({ name, age }) {  // props を直接分割代入
 <h2 id="sec3">3. デフォルト値・名前の付け替え・ネスト</h2>
 
 <h3>デフォルト値（値が無いときの初期値）</h3>
-<pre><code>const { name, role = "一般" } = { name: "Soufu" };
+<pre><code>const { name, role = "一般" } = { name: "Taro" };
 // role キーが無いので、デフォルトの "一般" が入る
 console.log(role); // "一般"</code></pre>
 
 <h3>名前の付け替え（リネーム）</h3>
-<pre><code>const { name: userName } = { name: "Soufu" };
+<pre><code>const { name: userName } = { name: "Taro" };
 // name キーの値を、userName という変数名で受け取る
-console.log(userName); // "Soufu"
+console.log(userName); // "Taro"
 // console.log(name); // ← これはエラー（name という変数は作られていない）</code></pre>
 
 <h3>ネスト（入れ子）の取り出し</h3>
-<pre><code>const data = { user: { name: "Soufu", age: 20 } };
+<pre><code>const data = { user: { name: "Taro", age: 20 } };
 const { user: { name } } = data;
-console.log(name); // "Soufu"</code></pre>
+console.log(name); // "Taro"</code></pre>
 
 <p class="back"><a href="#top">▲ 目次に戻る</a></p>
 
@@ -201,16 +201,16 @@ const added  = [0, ...a, 99];     // [0, 1, 2, 99]</code></pre>
 <h2 id="sec5">5. スプレッド構文（オブジェクト）</h2>
 
 <h3>オブジェクトのコピー</h3>
-<pre><code>const user = { name: "Soufu", age: 20 };
+<pre><code>const user = { name: "Taro", age: 20 };
 const copy = { ...user }; // 中身を展開して新しいオブジェクトに
-console.log(copy); // { name: "Soufu", age: 20 }</code></pre>
+console.log(copy); // { name: "Taro", age: 20 }</code></pre>
 
 <h3>一部だけ上書きした新オブジェクトを作る（最重要）</h3>
-<pre><code>const user = { name: "Soufu", age: 20 };
+<pre><code>const user = { name: "Taro", age: 20 };
 const updated = { ...user, age: 21 };
 //                 ↑既存を全部展開  ↑同じキーは「後に書いた方」で上書き
-console.log(updated); // { name: "Soufu", age: 21 }
-console.log(user);    // { name: "Soufu", age: 20 } ← 元は無傷</code></pre>
+console.log(updated); // { name: "Taro", age: 21 }
+console.log(user);    // { name: "Taro", age: 20 } ← 元は無傷</code></pre>
 
 <div class="why">
 <strong>この「展開して一部だけ上書き」が、React の state 更新でそのまま使われます。</strong>
@@ -231,9 +231,9 @@ console.log(head); // 1
 console.log(rest); // [2, 3, 4] ← 残りが新しい配列に集まる</code></pre>
 
 <h3>オブジェクトの残りを集める</h3>
-<pre><code>const { name, ...others } = { name: "Soufu", age: 20, city: "Kanazawa" };
-console.log(name);   // "Soufu"
-console.log(others); // { age: 20, city: "Kanazawa" }</code></pre>
+<pre><code>const { name, ...others } = { name: "Taro", age: 20, city: "Tokyo" };
+console.log(name);   // "Taro"
+console.log(others); // { age: 20, city: "Tokyo" }</code></pre>
 
 <h3>関数の「可変個の引数」を集める</h3>
 <pre><code>const sum = (...nums) => {

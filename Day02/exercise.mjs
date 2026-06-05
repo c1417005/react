@@ -43,8 +43,8 @@ function exercise2() {
   // ここにコードを書いてください
 
   if (typeof introduce !== "function") return undefined;
-  return introduce({ name: "Soufu", age: 20, city: "Kanazawa" });
-  // 期待値: "名前: Soufu / 年齢: 20"
+  return introduce({ name: "Taro", age: 20, city: "Tokyo" });
+  // 期待値: "名前: Taro / 年齢: 20"
 }
 
 
@@ -70,13 +70,13 @@ function exercise3() {
 // 元の user は変更せず（不変性）、age だけ 21 に変えた
 // 「新しいオブジェクト」を作って返してください。
 function exercise4() {
-  const user = { name: "Soufu", age: 20, city: "Kanazawa" };
+  const user = { name: "Taro", age: 20, city: "Tokyo" };
 
   // ここにコードを書いてください
   // const updated = { ... };
 
   return typeof updated !== "undefined" ? updated : undefined;
-  // 期待値: { name: "Soufu", age: 21, city: "Kanazawa" }
+  // 期待値: { name: "Taro", age: 21, city: "Tokyo" }
   // （user 自体は { ..., age: 20 } のままであること）
 }
 
@@ -113,7 +113,7 @@ const show = (label, value) => console.log(`  ${label}:`, fmt(value));
 
 console.log("■ Day02 演習の結果");
 show("演習1 (期待: red/green/blue)", exercise1());
-show("演習2 (期待: 名前: Soufu / 年齢: 20)", exercise2());
+show("演習2 (期待: 名前: Taro / 年齢: 20)", exercise2());
 show("演習3 (期待: theme=dark, fontSize=16)", exercise3());
 show("演習4 (期待: age=21, 他はそのまま)", exercise4());
 show("演習5 (期待: leader/rest/added)", exercise5());

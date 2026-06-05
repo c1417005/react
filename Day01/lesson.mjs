@@ -82,7 +82,7 @@ console.log("");
 // バッククォート ` ` で囲み、${ } の中に変数や式を埋め込めます。
 // 文字列の "+" 連結より読みやすく、改行もそのまま書けます。
 
-const userName = "Soufu";
+const userName = "Taro";
 const age = 20;
 
 // 従来の連結（読みにくい）
