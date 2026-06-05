@@ -24,7 +24,7 @@ function exercise1() {
 
   // ここにコードを書いてください
   // const [ ... ] = rgb;
-
+  const [red,green,blue] = rgb;
   return {
     red:   typeof red   !== "undefined" ? red   : undefined,
     green: typeof green !== "undefined" ? green : undefined,
@@ -41,6 +41,11 @@ function exercise1() {
 function exercise2() {
   // const introduce = (user) => { ... };
   // ここにコードを書いてください
+  let Info = ``
+  const introduce = (user) => {
+    const{name,age} = user
+    return `名前: ${name} / 年齢: ${age}`
+  };
 
   if (typeof introduce !== "function") return undefined;
   return introduce({ name: "Taro", age: 20, city: "Tokyo" });
@@ -58,6 +63,8 @@ function exercise3() {
   // ここにコードを書いてください
   // const { ... } = settings;
 
+  const {theme,fontSize=16} = settings;
+
   return {
     theme:    typeof theme    !== "undefined" ? theme    : undefined,
     fontSize: typeof fontSize !== "undefined" ? fontSize : undefined,
@@ -73,7 +80,7 @@ function exercise4() {
   const user = { name: "Taro", age: 20, city: "Tokyo" };
 
   // ここにコードを書いてください
-  // const updated = { ... };
+  const updated = {...user,age:21 };
 
   return typeof updated !== "undefined" ? updated : undefined;
   // 期待値: { name: "Taro", age: 21, city: "Tokyo" }
@@ -90,8 +97,8 @@ function exercise5() {
   const members = ["Alice", "Bob", "Carol"];
 
   // ここにコードを書いてください
-  // const [leader, ...rest] = ...;
-  // const added = [...];
+  const [leader, ...rest] = members;
+  const added = [...members,"Newcomer"];
 
   return {
     leader: typeof leader !== "undefined" ? leader : undefined,
