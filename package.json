@@ -1,0 +1,11 @@
+{
+  "name": "react-14days",
+  "version": "1.0.0",
+  "description": "React 14日間マスター学習プラン",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "day01": "node Day01/lesson.mjs",
+    "day02": "node Day02/exercise.mjs"
+  }
+}

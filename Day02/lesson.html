@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 02 — 分割代入・スプレッド/レスト構文</title>
+<style>
+  body { font-family: system-ui, "Segoe UI", "Hiragino Sans", "Meiryo", sans-serif;
+         line-height: 1.9; max-width: 860px; margin: 0 auto; padding: 24px 20px 80px;
+         color: #1a1a1a; background: #fafafa; }
+  h1 { border-bottom: 3px solid #61dafb; padding-bottom: 8px; }
+  h2 { margin-top: 48px; border-left: 6px solid #61dafb; padding-left: 12px;
+       background: #f0f9ff; padding-top: 6px; padding-bottom: 6px; }
+  h3 { margin-top: 28px; color: #0b5; }
+  code { background: #eef1f4; padding: 2px 6px; border-radius: 4px;
+         font-family: "Consolas", "SFMono-Regular", monospace; font-size: 0.92em; }
+  pre { background: #1e1e1e; color: #e6e6e6; padding: 16px; border-radius: 8px;
+        overflow-x: auto; line-height: 1.6; }
+  pre code { background: none; padding: 0; color: inherit; font-size: 0.9em; }
+  .toc { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 16px 24px; }
+  .toc ol { margin: 6px 0; }
+  .note { background: #fffbe6; border-left: 5px solid #f0c000; padding: 10px 16px;
+          border-radius: 4px; margin: 16px 0; }
+  .why { background: #eefdf3; border-left: 5px solid #0b5; padding: 10px 16px;
+         border-radius: 4px; margin: 16px 0; }
+  .back { font-size: 0.85em; }
+  .back a { color: #0969da; text-decoration: none; }
+  a { color: #0969da; }
+  table { border-collapse: collapse; margin: 16px 0; }
+  th, td { border: 1px solid #ccc; padding: 6px 12px; text-align: left; }
+  th { background: #f0f0f0; }
+</style>
+</head>
+<body>
+
+<h1 id="top">Day 02 — 分割代入・スプレッド/レスト構文</h1>
+
+<p><strong>学習目標:</strong> オブジェクト/配列の分割代入と、スプレッド（<code>...</code>）でのコピー・結合・上書きを使いこなす。
+これらは React の props・state で<strong>毎日使う</strong>基礎です。</p>
+
+<p><strong>公式ドキュメント（一次情報 / MDN）:</strong></p>
+<ul>
+  <li><a href="https://developer.mozilla.org/ja/docs/Web/JavaScript/Reference/Operators/Destructuring_assignment">分割代入</a></li>
+  <li><a href="https://developer.mozilla.org/ja/docs/Web/JavaScript/Reference/Operators/Spread_syntax">スプレッド構文</a></li>
+  <li><a href="https://developer.mozilla.org/ja/docs/Web/JavaScript/Reference/Functions/rest_parameters">残余引数（レスト）</a></li>
+</ul>
+
+<!-- ============ 目次 ============ -->
+<div class="toc">
+  <strong>目次</strong>
+  <ol>
+    <li><a href="#sec0">0. 準備運動: オブジェクトと配列のおさらい</a></li>
+    <li><a href="#sec1">1. 配列の分割代入</a></li>
+    <li><a href="#sec2">2. オブジェクトの分割代入</a></li>
+    <li><a href="#sec3">3. デフォルト値・名前の付け替え・ネスト</a></li>
+    <li><a href="#sec4">4. スプレッド構文（配列）</a></li>
+    <li><a href="#sec5">5. スプレッド構文（オブジェクト）</a></li>
+    <li><a href="#sec6">6. レスト（残り）構文</a></li>
+    <li><a href="#sec7">7. なぜ React で重要なのか（不変性）</a></li>
+    <li><a href="#sec8">8. 演習へ</a></li>
+  </ol>
+</div>
+
+<!-- ============ 0 ============ -->
+<h2 id="sec0">0. 準備運動: オブジェクトと配列のおさらい</h2>
+
+<p>分割代入の前に、「箱」の形を確認します。初学者向けに基礎から行きます。</p>
+
+<h3>配列（array）= 順番付きの並び</h3>
+<pre><code>const fruits = ["りんご", "みかん", "ぶどう"];
+// 取り出すときは「番号（インデックス）」を使う。番号は 0 から始まる。
+console.log(fruits[0]); // "りんご"
+console.log(fruits[1]); // "みかん"
+console.log(fruits.length); // 3 （要素の個数。() は付けない＝プロパティ）</code></pre>
+
+<h3>オブジェクト（object）= 名前付きの箱</h3>
+<pre><code>const user = { name: "Soufu", age: 20 };
+// 取り出すときは「キー（名前）」を使う。
+console.log(user.name); // "Soufu"
+console.log(user.age);  // 20</code></pre>
+
+<div class="note">
+<strong>for...of の補足（よく使うので先に）:</strong> 配列を1個ずつ取り出して回すループです。
+<pre><code>const nums = [10, 20, 30];
+for (const n of nums) {   // nums から要素を1つずつ n に入れて繰り返す
+  console.log(n);         // 10 → 20 → 30
+}</code></pre>
+<code>for (let i=0; i&lt;nums.length; i++)</code> の「番号で回す形」と結果は同じですが、
+<strong>中身そのものが欲しいだけなら for...of の方が短く安全</strong>です（番号の付け間違いが起きない）。
+</div>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+<!-- ============ 1 ============ -->
+<h2 id="sec1">1. 配列の分割代入</h2>
+
+<p>「分割代入（destructuring）」は、配列やオブジェクトの中身を<strong>まとめて別々の変数に取り出す</strong>書き方です。</p>
+
+<h3>今までの書き方</h3>
+<pre><code>const colors = ["red", "green", "blue"];
+const first  = colors[0];
+const second = colors[1];
+// 1行ずつ番号で取り出すのは面倒…</code></pre>
+
+<h3>分割代入の書き方</h3>
+<pre><code>const colors = ["red", "green", "blue"];
+const [first, second, third] = colors;
+//     ↑ 左辺を「配列の形」にすると、同じ位置の要素が入る
+console.log(first);  // "red"
+console.log(second); // "green"
+console.log(third);  // "blue"</code></pre>
+
+<div class="why">
+<strong>ポイント:</strong> 配列の分割代入は<strong>「位置（順番）」で対応</strong>します。
+左に書いた変数名は自由ですが、入る値は並び順で決まります。
+</div>
+
+<p>いらない要素はカンマで飛ばせます:</p>
+<pre><code>const [ , , third] = colors; // 最初の2つを飛ばす
+console.log(third); // "blue"</code></pre>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+<!-- ============ 2 ============ -->
+<h2 id="sec2">2. オブジェクトの分割代入</h2>
+
+<p>オブジェクトは<strong>「キー名」で対応</strong>します。順番は関係ありません。</p>
+
+<pre><code>const user = { name: "Soufu", age: 20, city: "Kanazawa" };
+
+// 今までの書き方
+const name = user.name;
+const age  = user.age;
+
+// 分割代入（左辺を「オブジェクトの形」にする）
+const { name, age } = user;
+//      ↑ user の中の name キー・age キーを同じ名前の変数に取り出す
+console.log(name); // "Soufu"
+console.log(age);  // 20</code></pre>
+
+<div class="why">
+<strong>React で超頻出:</strong> コンポーネントが受け取る props は、こうやって分割代入で取り出します。
+<pre><code>// 後の Day で出てくる形（今は雰囲気だけ）
+function Profile({ name, age }) {  // props を直接分割代入
+  return ...;
+}</code></pre>
+</div>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+<!-- ============ 3 ============ -->
+<h2 id="sec3">3. デフォルト値・名前の付け替え・ネスト</h2>
+
+<h3>デフォルト値（値が無いときの初期値）</h3>
+<pre><code>const { name, role = "一般" } = { name: "Soufu" };
+// role キーが無いので、デフォルトの "一般" が入る
+console.log(role); // "一般"</code></pre>
+
+<h3>名前の付け替え（リネーム）</h3>
+<pre><code>const { name: userName } = { name: "Soufu" };
+// name キーの値を、userName という変数名で受け取る
+console.log(userName); // "Soufu"
+// console.log(name); // ← これはエラー（name という変数は作られていない）</code></pre>
+
+<h3>ネスト（入れ子）の取り出し</h3>
+<pre><code>const data = { user: { name: "Soufu", age: 20 } };
+const { user: { name } } = data;
+console.log(name); // "Soufu"</code></pre>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+<!-- ============ 4 ============ -->
+<h2 id="sec4">4. スプレッド構文（配列）</h2>
+
+<p>スプレッド <code>...</code> は、配列やオブジェクトの<strong>中身を「展開（ばらまく）」</strong>する記号です。
+分割代入と見た目が似ていますが、<strong>役割は逆</strong>（取り出す→展開して入れる）です。</p>
+
+<h3>配列のコピー</h3>
+<pre><code>const original = [1, 2, 3];
+const copy = [...original]; // original の中身を展開して新しい配列に入れる
+console.log(copy); // [1, 2, 3]
+
+// これは「別物の新しい配列」。元には影響しない。
+copy.push(4);
+console.log(original); // [1, 2, 3] ← 変わらない！</code></pre>
+
+<h3>配列の結合・要素の追加</h3>
+<pre><code>const a = [1, 2];
+const b = [3, 4];
+const merged = [...a, ...b];      // [1, 2, 3, 4]
+const added  = [0, ...a, 99];     // [0, 1, 2, 99]</code></pre>
+
+<div class="note">
+<code>const copy = original;</code> と書くと、<strong>同じ配列を指すだけ</strong>でコピーになりません。
+<code>copy.push()</code> が <code>original</code> も変えてしまいます。だから <code>[...original]</code> で「新しい箱」を作るのが重要です。
+</div>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+<!-- ============ 5 ============ -->
+<h2 id="sec5">5. スプレッド構文（オブジェクト）</h2>
+
+<h3>オブジェクトのコピー</h3>
+<pre><code>const user = { name: "Soufu", age: 20 };
+const copy = { ...user }; // 中身を展開して新しいオブジェクトに
+console.log(copy); // { name: "Soufu", age: 20 }</code></pre>
+
+<h3>一部だけ上書きした新オブジェクトを作る（最重要）</h3>
+<pre><code>const user = { name: "Soufu", age: 20 };
+const updated = { ...user, age: 21 };
+//                 ↑既存を全部展開  ↑同じキーは「後に書いた方」で上書き
+console.log(updated); // { name: "Soufu", age: 21 }
+console.log(user);    // { name: "Soufu", age: 20 } ← 元は無傷</code></pre>
+
+<div class="why">
+<strong>この「展開して一部だけ上書き」が、React の state 更新でそのまま使われます。</strong>
+state は直接書き換えず、必ず「新しいオブジェクトを作って差し替える」のが React の約束事です（Day10 で正式に学びます）。
+</div>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+<!-- ============ 6 ============ -->
+<h2 id="sec6">6. レスト（残り）構文</h2>
+
+<p>同じ <code>...</code> ですが、<strong>左辺（受け取る側）で使うと「残り全部」を集める</strong>意味になります。
+（スプレッド=ばらまく / レスト=集める。場所で役割が変わります。）</p>
+
+<h3>配列の残りを集める</h3>
+<pre><code>const [head, ...rest] = [1, 2, 3, 4];
+console.log(head); // 1
+console.log(rest); // [2, 3, 4] ← 残りが新しい配列に集まる</code></pre>
+
+<h3>オブジェクトの残りを集める</h3>
+<pre><code>const { name, ...others } = { name: "Soufu", age: 20, city: "Kanazawa" };
+console.log(name);   // "Soufu"
+console.log(others); // { age: 20, city: "Kanazawa" }</code></pre>
+
+<h3>関数の「可変個の引数」を集める</h3>
+<pre><code>const sum = (...nums) => {
+  // nums は受け取った引数を全部集めた配列になる
+  let total = 0;
+  for (const n of nums) total += n;
+  return total;
+};
+console.log(sum(1, 2, 3));    // 6
+console.log(sum(10, 20));     // 30</code></pre>
+
+<table>
+  <tr><th>場所</th><th>意味</th><th>例</th></tr>
+  <tr><td>右辺・呼び出し側</td><td>スプレッド（展開）</td><td><code>[...a]</code>, <code>fn(...args)</code></td></tr>
+  <tr><td>左辺・引数定義</td><td>レスト（集める）</td><td><code>[x, ...rest]</code>, <code>(...args) =&gt;</code></td></tr>
+</table>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+<!-- ============ 7 ============ -->
+<h2 id="sec7">7. なぜ React で重要なのか（不変性）</h2>
+
+<p>React は「<strong>state（データ）が前と別物に変わったか</strong>」を見て、画面を描き直すか判断します。
+このとき、元のオブジェクト/配列を<strong>直接書き換える（ミューテーション）</strong>と、React が「変わった」と気づけないことがあります。</p>
+
+<pre><code>// ❌ ダメな例（元を直接いじる）
+user.age = 21;
+list.push(newItem);
+
+// ✅ 良い例（新しい箱を作る = 不変性 immutability）
+const newUser = { ...user, age: 21 };
+const newList = [...list, newItem];</code></pre>
+
+<div class="why">
+今日の分割代入・スプレッド・レストは、まさにこの「<strong>新しい箱を作って一部だけ変える</strong>」ための道具です。
+ここを手に馴染ませておくと、Day08 以降の state 更新が一気に楽になります。
+</div>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+<!-- ============ 8 ============ -->
+<h2 id="sec8">8. 演習へ</h2>
+
+<p>解説を読んだら、<code>Day02/exercise.mjs</code> の演習に進んでください。実行はプロジェクトのルートで:</p>
+<pre><code>npm run day02
+# または
+node Day02/exercise.mjs</code></pre>
+
+<p>演習は未回答でもエラーになりません。書けたら実行して結果を確認し、コードを貼ってもらえればレビューします（模範解答は出しません）。</p>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+</body>
+</html>
