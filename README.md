@@ -1,4 +1,9 @@
 # React 14日間マスター学習プラン
+https://engineering.mercari.com/blog/entry/20251223-ai-driven-learning/
+こちらの記事を参考にさせていただき、キャッチアップしたいと思っていたReactの学習用レポジトリ
+を作りました。問題作成、質問対応、コードレビューすべてclaude codeに任せています。
+解説はhtmlで作成させると、見やすく目次から飛べて便利でした。
+↓以下コース内容
 
 React 公式ドキュメント [https://react.dev/learn](https://react.dev/learn) を一次情報とした、14日間の体系的学習プランです。
 1日あたり **60〜90分** を想定しています。
