@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 03 — 配列メソッド・Promise/async</title>
+<style>
+  body { font-family: system-ui, "Segoe UI", "Hiragino Sans", "Meiryo", sans-serif;
+         line-height: 1.9; max-width: 860px; margin: 0 auto; padding: 24px 20px 80px;
+         color: #1a1a1a; background: #fafafa; }
+  h1 { border-bottom: 3px solid #61dafb; padding-bottom: 8px; }
+  h2 { margin-top: 48px; border-left: 6px solid #61dafb; padding-left: 12px;
+       background: #f0f9ff; padding-top: 6px; padding-bottom: 6px; }
+  h3 { margin-top: 28px; color: #0b5; }
+  code { background: #eef1f4; padding: 2px 6px; border-radius: 4px;
+         font-family: "Consolas", "SFMono-Regular", monospace; font-size: 0.92em; }
+  pre { background: #1e1e1e; color: #e6e6e6; padding: 16px; border-radius: 8px;
+        overflow-x: auto; line-height: 1.6; }
+  pre code { background: none; padding: 0; color: inherit; font-size: 0.9em; }
+  .toc { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 16px 24px; }
+  .toc ol { margin: 6px 0; }
+  .note { background: #fffbe6; border-left: 5px solid #f0c000; padding: 10px 16px;
+          border-radius: 4px; margin: 16px 0; }
+  .why { background: #eefdf3; border-left: 5px solid #0b5; padding: 10px 16px;
+         border-radius: 4px; margin: 16px 0; }
+  .back { font-size: 0.85em; }
+  .back a { color: #0969da; text-decoration: none; }
+  a { color: #0969da; }
+  table { border-collapse: collapse; margin: 16px 0; }
+  th, td { border: 1px solid #ccc; padding: 6px 12px; text-align: left; }
+  th { background: #f0f0f0; }
+</style>
+</head>
+<body>
+
+<h1 id="top">Day 03 — 配列メソッド・Promise/async</h1>
+
+<p><strong>学習目標:</strong> <code>map</code> / <code>filter</code> / <code>reduce</code> などの「配列メソッド」で、ループを書かずにデータを加工できるようになる。
+さらに <code>Promise</code> と <code>async/await</code> で「時間のかかる処理（非同期）」の書き方を理解する。
+配列メソッド（特に <code>map</code>）は、React で<strong>リスト表示のたびに毎回使う</strong>最重要スキルです。</p>
+
+<p><strong>公式ドキュメント（一次情報 / MDN）:</strong></p>
+<ul>
+  <li><a href="https://developer.mozilla.org/ja/docs/Web/JavaScript/Reference/Global_Objects/Array/map">Array.prototype.map()</a></li>
+  <li><a href="https://developer.mozilla.org/ja/docs/Web/JavaScript/Reference/Global_Objects/Array/filter">Array.prototype.filter()</a></li>
+  <li><a href="https://developer.mozilla.org/ja/docs/Web/JavaScript/Reference/Global_Objects/Array/reduce">Array.prototype.reduce()</a></li>
+  <li><a href="https://developer.mozilla.org/ja/docs/Web/JavaScript/Reference/Global_Objects/Promise">Promise</a></li>
+  <li><a href="https://developer.mozilla.org/ja/docs/Web/JavaScript/Reference/Statements/async_function">async function</a></li>
+</ul>
+
+<!-- ============ 目次 ============ -->
+<div class="toc">
+  <strong>目次</strong>
+  <ol>
+    <li><a href="#sec0">0. 準備運動: コールバック関数とは</a></li>
+    <li><a href="#sec1">1. forEach — 1個ずつ処理する</a></li>
+    <li><a href="#sec2">2. map — 全要素を「変換」して新しい配列を作る（最重要）</a></li>
+    <li><a href="#sec3">3. filter — 条件に合うものだけ残す</a></li>
+    <li><a href="#sec4">4. find / some / every — 探す・判定する</a></li>
+    <li><a href="#sec5">5. reduce — 全部を1つの値にまとめる</a></li>
+    <li><a href="#sec6">6. メソッドチェーン（つなげて使う）</a></li>
+    <li><a href="#sec7">7. 非同期処理とは — なぜ必要か</a></li>
+    <li><a href="#sec8">8. Promise の基本</a></li>
+    <li><a href="#sec9">9. async / await（読みやすい書き方）</a></li>
+    <li><a href="#sec10">10. なぜ React で重要なのか</a></li>
+    <li><a href="#sec11">11. 演習へ</a></li>
+  </ol>
+</div>
+
+<!-- ============ 0 ============ -->
+<h2 id="sec0">0. 準備運動: コールバック関数とは</h2>
+
+<p>配列メソッドを理解するカギは「<strong>コールバック関数</strong>」です。
+これは「<strong>関数の引数として渡す関数</strong>」のことです。聞き慣れないと身構えますが、やっていることは単純です。</p>
+
+<pre><code>// 関数は「値」なので、別の関数に渡すことができる。
+function greet(name) {
+  return "こんにちは " + name;
+}
+
+// greet を「呼び出した結果」ではなく、「greet そのもの」を渡す例
+function run(fn) {     // fn には関数が入ってくる
+  return fn("Taro");   // 受け取った関数を、中で呼び出す
+}
+console.log(run(greet)); // "こんにちは Taro"</code></pre>
+
+<div class="note">
+<strong>違いに注意:</strong> <code>greet</code>（カッコなし）は「関数そのもの」を指します。
+<code>greet("Taro")</code>（カッコあり）は「その場で呼び出した<strong>結果</strong>（文字列）」です。
+配列メソッドには<strong>カッコなしの関数（＝後で呼んでもらう関数）</strong>を渡します。
+</div>
+
+<p>実際にはその場で書く「無名のアロー関数」を渡すことがほとんどです:</p>
+<pre><code>// 上の run に、その場で作った関数を直接渡す
+console.log(run((name) => "やあ " + name)); // "やあ Taro"</code></pre>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+<!-- ============ 1 ============ -->
+<h2 id="sec1">1. forEach — 1個ずつ処理する</h2>
+
+<p><code>forEach</code> は、配列の要素を<strong>1個ずつ取り出して、渡した関数を実行する</strong>だけのメソッドです。
+<code>for...of</code> ループの「メソッド版」と考えてください。</p>
+
+<pre><code>const fruits = ["りんご", "みかん", "ぶどう"];
+
+fruits.forEach((fruit) => {
+  // fruit に "りんご" → "みかん" → "ぶどう" が順番に入って、関数が3回呼ばれる
+  console.log(fruit);
+});
+// 出力: りんご / みかん / ぶどう</code></pre>
+
+<p>第2引数で「インデックス（番号）」も受け取れます:</p>
+<pre><code>fruits.forEach((fruit, index) => {
+  console.log(index + ": " + fruit); // "0: りんご" など
+});</code></pre>
+
+<div class="note">
+<code>forEach</code> は<strong>戻り値がありません（常に undefined）</strong>。「処理を実行するだけ」で、
+新しい配列は作りません。<strong>新しい配列が欲しいときは次の <code>map</code> を使います。</strong>
+</div>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+<!-- ============ 2 ============ -->
+<h2 id="sec2">2. map — 全要素を「変換」して新しい配列を作る（最重要）</h2>
+
+<p><code>map</code>（マップ）は、各要素を<strong>変換した結果を集めた「新しい配列」を返す</strong>メソッドです。
+「全部に同じ加工をして、新しい配列を作りたい」ときに使います。</p>
+
+<h3>今までの書き方（for ループ）</h3>
+<pre><code>const nums = [1, 2, 3];
+const doubled = [];
+for (const n of nums) {
+  doubled.push(n * 2);   // 2倍して新しい配列に詰める
+}
+console.log(doubled); // [2, 4, 6]</code></pre>
+
+<h3>map の書き方</h3>
+<pre><code>const nums = [1, 2, 3];
+const doubled = nums.map((n) => n * 2);
+//                        ↑ 各要素 n を「n * 2」に変換した結果が集まる
+console.log(doubled); // [2, 4, 6]
+console.log(nums);    // [1, 2, 3] ← 元は変わらない（新しい配列を返すだけ）</code></pre>
+
+<div class="why">
+<strong>map のしくみ:</strong> 渡した関数が<strong>各要素ごとに呼ばれ</strong>、その<strong>return した値</strong>が新しい配列の同じ位置に入ります。
+要素数は必ず元と同じ（3個なら3個）になります。<code>return</code> を書き忘れると <code>undefined</code> が並ぶので注意。
+</div>
+
+<p>オブジェクトの配列を加工する例（React で頻出の形）:</p>
+<pre><code>const users = [
+  { id: 1, name: "Taro" },
+  { id: 2, name: "Hanako" },
+];
+// 名前だけ取り出した配列にする
+const names = users.map((user) => user.name);
+console.log(names); // ["Taro", "Hanako"]</code></pre>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+<!-- ============ 3 ============ -->
+<h2 id="sec3">3. filter — 条件に合うものだけ残す</h2>
+
+<p><code>filter</code>（フィルター）は、渡した関数が <code>true</code> を返した要素<strong>だけ</strong>を集めた新しい配列を返します。
+「ふるい分け」です。要素数は<strong>減ることがある</strong>のが <code>map</code> との違いです。</p>
+
+<pre><code>const nums = [1, 2, 3, 4, 5, 6];
+
+// 偶数だけ残す（n % 2 === 0 が true のものだけ通す）
+const evens = nums.filter((n) => n % 2 === 0);
+console.log(evens); // [2, 4, 6]</code></pre>
+
+<div class="note">
+<strong><code>%</code>（剰余）の補足:</strong> 割った「余り」を出す記号です。<code>4 % 2</code> は 0（割り切れる＝偶数）、
+<code>5 % 2</code> は 1（余り1＝奇数）。<code>=== 0</code> で「割り切れるか」を判定しています。
+</div>
+
+<p>オブジェクトの配列を条件で絞る例:</p>
+<pre><code>const users = [
+  { name: "Taro",   active: true },
+  { name: "Hanako", active: false },
+  { name: "Jiro",   active: true },
+];
+const activeUsers = users.filter((u) => u.active === true);
+console.log(activeUsers.length); // 2</code></pre>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+<!-- ============ 4 ============ -->
+<h2 id="sec4">4. find / some / every — 探す・判定する</h2>
+
+<h3>find — 最初に見つかった「1個」を返す</h3>
+<pre><code>const users = [
+  { id: 1, name: "Taro" },
+  { id: 2, name: "Hanako" },
+];
+const found = users.find((u) => u.id === 2);
+console.log(found); // { id: 2, name: "Hanako" }
+// 見つからなければ undefined を返す</code></pre>
+
+<div class="note">
+<code>filter</code> は<strong>条件に合う全部の「配列」</strong>、<code>find</code> は<strong>最初の「1個」</strong>を返します。
+「1件だけ欲しい」なら <code>find</code> の方が分かりやすく、見つかった時点で探索を止めるので無駄がありません。
+</div>
+
+<h3>some / every — true / false で答える</h3>
+<pre><code>const nums = [1, 2, 3, 4];
+
+// some: 「1つでも」条件を満たすか？
+console.log(nums.some((n) => n > 3));  // true（4 がある）
+
+// every: 「全部が」条件を満たすか？
+console.log(nums.every((n) => n > 0)); // true（全部 0 より大きい）
+console.log(nums.every((n) => n > 2)); // false（1, 2 がある）</code></pre>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+<!-- ============ 5 ============ -->
+<h2 id="sec5">5. reduce — 全部を1つの値にまとめる</h2>
+
+<p><code>reduce</code>（リデュース）は、配列全体を<strong>「1つの値」に畳み込む</strong>メソッドです。
+合計・最大値・1つのオブジェクトへの集約など、「最後に1個の答えにしたい」ときに使います。
+少し難しいので、ゆっくり見ましょう。</p>
+
+<pre><code>const nums = [1, 2, 3, 4];
+
+const total = nums.reduce((acc, n) => {
+  // acc = これまでの累計（accumulator）/ n = 今の要素
+  return acc + n;
+}, 0); // ← 0 は acc の「初期値」
+
+console.log(total); // 10</code></pre>
+
+<div class="why">
+<strong>動きを追う（初期値 0 のとき）:</strong>
+<table>
+  <tr><th>回</th><th>acc（累計）</th><th>n（今の要素）</th><th>return（次の acc）</th></tr>
+  <tr><td>1回目</td><td>0</td><td>1</td><td>1</td></tr>
+  <tr><td>2回目</td><td>1</td><td>2</td><td>3</td></tr>
+  <tr><td>3回目</td><td>3</td><td>3</td><td>6</td></tr>
+  <tr><td>4回目</td><td>6</td><td>4</td><td>10</td></tr>
+</table>
+毎回 <code>return</code> した値が「次の回の acc」になります。最後の acc（10）が答えになります。
+</div>
+
+<div class="note">
+<strong>第2引数の初期値は省略しないのが安全です。</strong> 省略すると配列の先頭要素が初期値になり、
+空配列のときにエラーになるなど挙動が変わります。慣れるまでは必ず初期値を書きましょう。
+</div>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+<!-- ============ 6 ============ -->
+<h2 id="sec6">6. メソッドチェーン（つなげて使う）</h2>
+
+<p><code>map</code> や <code>filter</code> は<strong>「新しい配列」を返す</strong>ので、その結果にさらにメソッドを<strong>つなげて</strong>書けます。
+これを「メソッドチェーン」と呼びます。</p>
+
+<pre><code>const nums = [1, 2, 3, 4, 5, 6];
+
+const result = nums
+  .filter((n) => n % 2 === 0)  // まず偶数だけ → [2, 4, 6]
+  .map((n) => n * 10);         // それを10倍   → [20, 40, 60]
+
+console.log(result); // [20, 40, 60]</code></pre>
+
+<div class="why">
+<strong>読み方:</strong> 上から順に「データが加工されて流れていく」とイメージします。
+<code>filter</code> でふるいにかけ → 残ったものを <code>map</code> で変換、という<strong>処理の流れ</strong>がそのまま読めるのが利点です。
+for ループで同じことを書くより、意図が明確になります。
+</div>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+<!-- ============ 7 ============ -->
+<h2 id="sec7">7. 非同期処理とは — なぜ必要か</h2>
+
+<p>ここからは話題が変わって「<strong>非同期（asynchronous）処理</strong>」です。
+これは「<strong>時間のかかる処理を、待っている間に他のことを止めない</strong>」しくみです。</p>
+
+<p>例えば「サーバーからデータを取ってくる」のには時間がかかります。
+もしその間プログラム全体が止まったら、画面が固まって何も操作できません。
+そこで「<strong>結果は後で受け取るね</strong>」と予約して、待っている間は先に進めるようにします。</p>
+
+<pre><code>console.log("1: 注文する");
+
+setTimeout(() => {
+  // setTimeout は「指定ミリ秒後に関数を実行」する。ここでは1秒後。
+  console.log("3: 料理が届く（1秒後）");
+}, 1000);
+
+console.log("2: 他のことをする");
+
+// 実際の出力順:
+// 1: 注文する
+// 2: 他のことをする   ← 待たずに先に進む！
+// 3: 料理が届く（1秒後）</code></pre>
+
+<div class="why">
+<strong>ポイント:</strong> 上から順に全部待つ（同期）のではなく、時間のかかる処理は<strong>脇に置いて先に進み、終わったら結果が返ってくる</strong>。
+これが非同期です。「<code>3</code>」が最後に出るのが、その証拠です。
+</div>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+<!-- ============ 8 ============ -->
+<h2 id="sec8">8. Promise の基本</h2>
+
+<p><code>Promise</code>（プロミス＝約束）は、「<strong>今はまだ無いけど、いずれ結果が出る値</strong>」を表す箱です。
+結果は2通り: <strong>成功（resolve）</strong>か<strong>失敗（reject）</strong>。</p>
+
+<pre><code>// 「1秒後に成功する」Promise を作る例
+const promise = new Promise((resolve, reject) => {
+  setTimeout(() => {
+    resolve("データ取得成功!"); // 成功した値を渡す
+    // reject("エラー発生");    // 失敗ならこちら
+  }, 1000);
+});</code></pre>
+
+<p>結果を受け取るには <code>.then()</code>（成功時）と <code>.catch()</code>（失敗時）をつなぎます:</p>
+<pre><code>promise
+  .then((value) => {
+    console.log("成功:", value); // "成功: データ取得成功!"
+  })
+  .catch((error) => {
+    console.log("失敗:", error);
+  });</code></pre>
+
+<div class="note">
+多くの「時間のかかる関数」は、最初から Promise を返してくれます（例: ブラウザの <code>fetch()</code>）。
+自分で <code>new Promise</code> を書く機会は少なく、<strong>返ってきた Promise をどう受け取るか</strong>の方が大事です。
+</div>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+<!-- ============ 9 ============ -->
+<h2 id="sec9">9. async / await（読みやすい書き方）</h2>
+
+<p><code>.then()</code> のチェーンは深くなると読みにくくなります。
+そこで <code>async</code> / <code>await</code> を使うと、<strong>非同期処理を「上から順に読める普通のコード」のように</strong>書けます。</p>
+
+<pre><code>// async を付けた関数の中でだけ await が使える
+async function main() {
+  console.log("取得開始");
+
+  // await: Promise の結果が出る「まで待って」、中身を取り出す
+  const value = await promise;   // resolve された値がそのまま value に入る
+  console.log("結果:", value);
+
+  console.log("続きの処理");
+}
+main();</code></pre>
+
+<div class="why">
+<strong><code>await</code> の意味:</strong> 「この Promise が終わるまでここで待ち、成功した値を取り出す」。
+<code>.then()</code> の中に書いていた処理を、<strong>そのまま下の行に続けて</strong>書けるのが利点です。
+ただし <code>await</code> は <code>async</code> 関数の中でしか使えません。
+</div>
+
+<h3>エラー処理は try / catch で</h3>
+<pre><code>async function main() {
+  try {
+    const value = await promise;  // 失敗するとここで例外が投げられる
+    console.log("成功:", value);
+  } catch (error) {
+    console.log("失敗:", error);   // reject された値がここに来る
+  }
+}</code></pre>
+
+<table>
+  <tr><th>書き方</th><th>成功時</th><th>失敗時</th></tr>
+  <tr><td>Promise</td><td><code>.then()</code></td><td><code>.catch()</code></td></tr>
+  <tr><td>async/await</td><td><code>const x = await ...</code></td><td><code>try { } catch { }</code></td></tr>
+</table>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+<!-- ============ 10 ============ -->
+<h2 id="sec10">10. なぜ React で重要なのか</h2>
+
+<ul>
+  <li><strong>map:</strong> 配列データを画面のリスト（要素の並び）に変換するとき、React では <code>items.map(...)</code> で要素を量産します。<strong>これは毎回使います。</strong></li>
+  <li><strong>filter:</strong> 「完了済みだけ表示」「検索でヒットしたものだけ表示」など、表示するデータの絞り込みに使います。</li>
+  <li><strong>不変性との相性:</strong> <code>map</code>/<code>filter</code> は<strong>元の配列を壊さず新しい配列を返す</strong>ので、Day02 で学んだ「不変性」とそのまま噛み合います。state 更新で多用します。</li>
+  <li><strong>async/await:</strong> サーバーからデータを取得して画面に出す（Effects / データ取得）処理で使います。</li>
+</ul>
+
+<pre><code>// 後の Day で出てくる形（今は雰囲気だけ）
+function UserList({ users }) {
+  return (
+    &lt;ul&gt;
+      {users.map((user) =&gt; &lt;li key={user.id}&gt;{user.name}&lt;/li&gt;)}
+    &lt;/ul&gt;
+  );
+}</code></pre>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+<!-- ============ 11 ============ -->
+<h2 id="sec11">11. 演習へ</h2>
+
+<p>解説を読んだら、<code>Day03/exercise.mjs</code> の演習に進んでください。実行はプロジェクトのルートで:</p>
+<pre><code>npm run day03
+# または
+node Day03/exercise.mjs</code></pre>
+
+<p>演習は未回答でもエラーになりません。書けたら実行して結果を確認し、コードを貼ってもらえればレビューします（模範解答は出しません）。</p>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+</body>
+</html>

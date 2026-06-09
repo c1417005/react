@@ -6,6 +6,7 @@
   "private": true,
   "scripts": {
     "day01": "node Day01/lesson.mjs",
-    "day02": "node Day02/exercise.mjs"
+    "day02": "node Day02/exercise.mjs",
+    "day03": "node Day03/exercise.mjs"
   }
 }
