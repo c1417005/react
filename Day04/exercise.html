@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 04 — 演習: React入門と最初のコンポーネント</title>
+
+<!-- ① React 本体 / ② ReactDOM（画面描画・採点用） / ③ Babel(JSX翻訳) -->
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<style>
+  body { font-family: system-ui, "Segoe UI", "Hiragino Sans", "Meiryo", sans-serif;
+         line-height: 1.8; max-width: 900px; margin: 0 auto; padding: 24px 20px 80px;
+         color: #1a1a1a; background: #fafafa; }
+  h1 { border-bottom: 3px solid #61dafb; padding-bottom: 8px; }
+  .lead { background: #fffbe6; border-left: 5px solid #f0c000; padding: 10px 16px;
+          border-radius: 4px; margin: 16px 0; }
+  .card { background: #fff; border: 1px solid #ddd; border-radius: 8px;
+          padding: 16px 20px; margin: 18px 0; }
+  .card h2 { margin-top: 0; font-size: 1.1em; }
+  .status { font-weight: bold; padding: 2px 10px; border-radius: 999px; font-size: 0.9em; }
+  .pass { background: #e3f9e5; color: #0b5; border: 1px solid #0b5; }
+  .fail { background: #fdeeee; color: #d33; border: 1px solid #d33; }
+  .todo { background: #eef1f4; color: #555; border: 1px solid #bbb; }
+  .desc { color: #333; }
+  .preview { border: 1px dashed #aaa; border-radius: 6px; padding: 12px 16px;
+             margin-top: 10px; background: #fcfcfc; }
+  .preview-label { font-size: 0.8em; color: #888; margin-bottom: 4px; }
+  code { background: #eef1f4; padding: 2px 6px; border-radius: 4px;
+         font-family: "Consolas", monospace; font-size: 0.92em; }
+  pre { background: #1e1e1e; color: #e6e6e6; padding: 12px; border-radius: 6px;
+        overflow-x: auto; font-size: 0.85em; }
+  .hint { font-size: 0.88em; color: #555; }
+</style>
+</head>
+<body>
+
+<h1>Day 04 — 演習: React入門と最初のコンポーネント</h1>
+
+<div class="lead">
+  <strong>進め方:</strong> このファイル <code>Day04/exercise.html</code> をエディタで開き、各コンポーネントの
+  <code>/* ここに JSX を書いてください */</code> を自分のコードに置き換えて<strong>保存 → ブラウザで再読み込み</strong>してください。
+  下に各課題の合否（✅/❌）と、実際の表示プレビューが出ます。未回答は「未回答」と表示されます。<br>
+  解説は <code>Day04/lesson.html</code>。模範解答は出しません。書けたらコードを貼ってレビューに出してください。
+</div>
+
+<div id="results"></div>
+
+<!-- ===================================================================
+     ここから下が「あなたが編集する場所」です。
+     各コンポーネントの return 部分を完成させてください。
+==================================================================== -->
+<script type="text/babel" data-presets="react">
+
+// --- 演習1（復習・やさしい）: 最初のコンポーネント -------------------
+// <h1> タグで「こんにちは、React!」と表示するコンポーネントにしてください。
+function Exercise1() {
+  // ここに JSX を書いてください
+  // 例:  return <h1>...</h1>;
+  return <h1> こんにちは、React! </h1>;
+  // 期待表示: こんにちは、React!（h1 見出しで）
+}
+
+
+// --- 演習2（ふつう）: 波括弧 { } で計算結果を埋め込む ----------------
+// price（税抜価格）と tax（税率）から「税込: ◯◯ 円」と表示してください。
+// 税込価格は Math.floor(price * (1 + tax)) で計算します（小数切り捨て）。
+function Exercise2() {
+  const price = 1200;
+  const tax = 0.1;
+
+  // ここに JSX を書いてください（{ } の中で計算してOK）
+  // 例:  return <p>税込: {/* ここで計算 */} 円</p>;
+
+  return <p>税込:{Math.floor(price * (1 + tax))}円 </p>;
+  // 期待表示: 税込: 1320 円
+}
+
+
+// --- 演習3（ふつう）: コンポーネントの合成 ---------------------------
+// Header と Footer は完成済みです（編集しないでOK）。
+// この2つと <main> を組み合わせて Page を完成させてください。
+// 全体を <div> または <></> で1つに包むのを忘れずに。
+function Header() {
+  return <header>ニュースサイト</header>;
+}
+function Footer() {
+  return <footer>© 2026 News</footer>;
+}
+function Exercise3() {
+  // ここに JSX を書いてください。
+  // <Header /> と <Footer /> を使い、間に <main>今日のトップニュース</main> を置く。
+
+  return <div>
+    <Header />
+    <main>
+      今日のトップニュース
+    </main>
+    <Footer />
+
+    </div>;
+  // 期待表示（順番に）: ニュースサイト / 今日のトップニュース / © 2026 News
+}
+
+
+// --- 演習4（ちょいむず）: map でリスト表示 ---------------------------
+// 配列 skills を map で <li> に変換し、<ul> の中に並べてください。
+// 各 <li> には key を付けること（ここでは文字列そのものを key にしてOK）。
+function Exercise4() {
+  const skills = ["HTML", "CSS", "JavaScript", "React"];
+
+  // ここに JSX を書いてください（<ul> の中で skills.map(...) を使う）
+  return <ul>
+    {skills.map((skill) => 
+      <li key = {skill}>{skill} </li>
+    )}
+    </ul>;
+    // mapでタグごと囲む
+  // 期待表示: HTML / CSS / JavaScript / React の箇条書き（4項目）
+}
+
+
+// --- 演習5（ちょいむず）: map + 三項演算子で条件表示 -----------------
+// students を map で <li> にし、score が 60 以上なら「合格」、
+// そうでなければ「不合格」を名前の後ろに付けてください。key は id を使う。
+// 表示例（1行）: 「Taro: 合格」
+function Exercise5() {
+  const students = [
+    { id: 1, name: "Taro",   score: 82 },
+    { id: 2, name: "Hanako", score: 49 },
+    { id: 3, name: "Jiro",   score: 60 },
+  ];
+
+  // ここに JSX を書いてください
+  return <ul>
+    {students.map((student) =>(
+<li key = {student.id}>{student.name}: {student.score>=60 ? '合格':'不合格'}</li>))}
+</ul>
+  // 期待表示: Taro: 合格 / Hanako: 不合格 / Jiro: 合格
+  // return <タグ>{
+  //   ~.map...
+  // }
+  // </タグ>
+}
+
+
+// --- 演習6（むず・総合）: map + reduce + 合成 ------------------------
+// products を使って「商品リスト + 合計金額」を表示する Cart を作ってください。
+//   - 各商品を <li> で「商品名 ¥価格」の形に（key は id）。例: 「りんご ¥120」
+//   - 最後に <p> で「合計: ¥◯◯」を表示（reduce で price を合計）。例: 「合計: ¥500」
+//   - <ul> と <p> を1つの親（<div> か <></>）で包むこと。
+function Exercise6() {
+  const products = [
+    { id: 1, name: "りんご", price: 120 },
+    { id: 2, name: "みかん", price: 80 },
+    { id: 3, name: "ぶどう", price: 300 },
+  ];
+  const total = products.reduce((acc,p) => acc + p.price,0);
+ 
+
+  // ここに JSX を書いてください
+		// ヒント: 合計は const total = products.reduce((acc, p) => acc + p.price, 0);
+  return <div><ul>
+    {products.map((product) => <li key= {product.id}>{product.name} ¥{product.price}</li>)}
+    <p>合計 ¥{total}</p>
+
+    </ul></div>;
+  // 期待表示: りんご ¥120 / みかん ¥80 / ぶどう ¥300 ／ 合計: ¥500
+}
+
+
+// =====================================================================
+//  採点ハーネス（ここから下は編集しません）
+// =====================================================================
+const norm = (s) => (s || "").replace(/\s+/g, " ").trim();
+
+function evaluate(Comp) {
+  // 画面外の箱にコンポーネントを描画し、その結果(HTML/テキスト)を取り出して採点する。
+  // flushSync で「同期的に」描画を完了させてから innerHTML を読むのがポイント。
+  const container = document.createElement("div");
+  try {
+    const root = ReactDOM.createRoot(container);
+    ReactDOM.flushSync(() => {
+      root.render(React.createElement(Comp));
+    });
+    const result = { ok: true, html: container.innerHTML, text: norm(container.textContent) };
+    root.unmount();
+    return result;
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+}
+
+// 各課題: 合格条件を check(html, text) で判定する
+const TASKS = [
+  {
+    n: 1, title: "演習1: 最初のコンポーネント",
+    desc: "<h1> で「こんにちは、React!」",
+    Comp: Exercise1,
+    check: (html, text) => /<h1[ >]/.test(html) && text === "こんにちは、React!",
+  },
+  {
+    n: 2, title: "演習2: { } で計算を埋め込む",
+    desc: "「税込: 1320 円」と表示",
+    Comp: Exercise2,
+    check: (html, text) => text.includes("税込") && text.includes("1320"),
+  },
+  {
+    n: 3, title: "演習3: コンポーネントの合成",
+    desc: "Header / main / Footer を順に表示",
+    Comp: Exercise3,
+    check: (html, text) =>
+      text.includes("ニュースサイト") &&
+      text.includes("今日のトップニュース") &&
+      text.includes("© 2026 News"),
+  },
+  {
+    n: 4, title: "演習4: map でリスト表示",
+    desc: "4項目の箇条書き（key 付き）",
+    Comp: Exercise4,
+    check: (html, text) => {
+      const liCount = (html.match(/<li/g) || []).length;
+      return liCount === 4 &&
+        ["HTML", "CSS", "JavaScript", "React"].every((s) => text.includes(s));
+    },
+  },
+  {
+    n: 5, title: "演習5: map + 三項演算子",
+    desc: "score>=60 で 合格 / 不合格",
+    Comp: Exercise5,
+    check: (html, text) =>
+      text.includes("Taro") && text.includes("Hanako") && text.includes("Jiro") &&
+      // 合格2回・不合格1回が含まれること（不合格の中の「合格」を除いて数える）
+      (text.match(/不合格/g) || []).length === 1 &&
+      (text.replace(/不合格/g, "").match(/合格/g) || []).length === 2,
+  },
+  {
+    n: 6, title: "演習6: map + reduce + 合成（総合）",
+    desc: "商品リスト + 合計 ¥500",
+    Comp: Exercise6,
+    check: (html, text) => {
+      const items = ["りんご", "120", "みかん", "80", "ぶどう", "300"];
+      const liCount = (html.match(/<li/g) || []).length;
+      return liCount === 3 &&
+        items.every((s) => text.includes(s)) &&
+        text.includes("合計") && text.includes("500");
+    },
+  },
+];
+
+function badge(kind, label) {
+  return `<span class="status ${kind}">${label}</span>`;
+}
+
+function run() {
+  const root = document.getElementById("results");
+  let html = "";
+  for (const t of TASKS) {
+    const r = evaluate(t.Comp);
+    let status, previewHtml = "", note = "";
+
+    if (!r.ok) {
+      status = badge("fail", "エラー");
+      note = `<pre>${r.error}</pre>`;
+    } else if (r.html.trim() === "") {
+      status = badge("todo", "未回答");
+    } else if (t.check(r.html, r.text)) {
+      status = badge("pass", "✅ 合格");
+      previewHtml = r.html;
+    } else {
+      status = badge("fail", "❌ もう少し");
+      previewHtml = r.html;
+      note = `<div class="hint">いまの表示テキスト: 「${r.text}」</div>`;
+    }
+
+    const preview = previewHtml
+      ? `<div class="preview"><div class="preview-label">▼ 実際の表示プレビュー</div>${previewHtml}</div>`
+      : "";
+
+    html += `
+      <div class="card">
+        <h2>${t.title} ${status}</h2>
+        <div class="desc">目標: ${t.desc}</div>
+        ${preview}
+        ${note}
+      </div>`;
+  }
+  root.innerHTML = html;
+}
+
+run();
+</script>
+</body>
+</html>

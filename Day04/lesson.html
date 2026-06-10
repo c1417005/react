@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 04 — React入門と最初のコンポーネント</title>
+<style>
+  body { font-family: system-ui, "Segoe UI", "Hiragino Sans", "Meiryo", sans-serif;
+         line-height: 1.9; max-width: 860px; margin: 0 auto; padding: 24px 20px 80px;
+         color: #1a1a1a; background: #fafafa; }
+  h1 { border-bottom: 3px solid #61dafb; padding-bottom: 8px; }
+  h2 { margin-top: 48px; border-left: 6px solid #61dafb; padding-left: 12px;
+       background: #f0f9ff; padding-top: 6px; padding-bottom: 6px; }
+  h3 { margin-top: 28px; color: #0b5; }
+  code { background: #eef1f4; padding: 2px 6px; border-radius: 4px;
+         font-family: "Consolas", "SFMono-Regular", monospace; font-size: 0.92em; }
+  pre { background: #1e1e1e; color: #e6e6e6; padding: 16px; border-radius: 8px;
+        overflow-x: auto; line-height: 1.6; }
+  pre code { background: none; padding: 0; color: inherit; font-size: 0.9em; }
+  .toc { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 16px 24px; }
+  .toc ol { margin: 6px 0; }
+  .note { background: #fffbe6; border-left: 5px solid #f0c000; padding: 10px 16px;
+          border-radius: 4px; margin: 16px 0; }
+  .why { background: #eefdf3; border-left: 5px solid #0b5; padding: 10px 16px;
+         border-radius: 4px; margin: 16px 0; }
+  .warn { background: #fdeeee; border-left: 5px solid #d33; padding: 10px 16px;
+          border-radius: 4px; margin: 16px 0; }
+  .back { font-size: 0.85em; }
+  .back a { color: #0969da; text-decoration: none; }
+  a { color: #0969da; }
+  table { border-collapse: collapse; margin: 16px 0; }
+  th, td { border: 1px solid #ccc; padding: 6px 12px; text-align: left; }
+  th { background: #f0f0f0; }
+</style>
+</head>
+<body>
+
+<h1 id="top">Day 04 — React入門と最初のコンポーネント</h1>
+
+<p><strong>学習目標:</strong> React の正体（<strong>コンポーネント</strong>＝UIの部品）を理解し、自分で関数コンポーネントを書いて画面に表示できるようになる。
+JSX の中に <code>{ }</code> で JavaScript を埋め込む方法、コンポーネントを<strong>入れ子（合成）</strong>する方法、配列を <code>map</code> で<strong>リスト表示</strong>する方法までを身につけます。</p>
+
+<div class="note">
+<strong>今回からブラウザで学びます。</strong> Day01〜03 は Node.js（<code>.mjs</code>）で実行してきましたが、React は<strong>画面（DOM）に表示する</strong>のが本質です。
+そのため解説・演習とも <strong>HTML ファイルをブラウザで直接開いて</strong>動かします（インストールやビルド不要）。
+仕組みは <a href="#sec1">セクション1</a> で説明します。
+</div>
+
+<p><strong>公式ドキュメント（一次情報 / react.dev）:</strong></p>
+<ul>
+  <li><a href="https://react.dev/learn">クイックスタート（Quick Start）</a></li>
+  <li><a href="https://react.dev/learn/your-first-component">はじめてのコンポーネント</a></li>
+  <li><a href="https://react.dev/learn/writing-markup-with-jsx">JSX でマークアップを書く</a></li>
+  <li><a href="https://react.dev/learn/javascript-in-jsx-with-curly-braces">波括弧で JSX に JavaScript を入れる</a></li>
+  <li><a href="https://react.dev/learn/rendering-lists">リストのレンダリング</a></li>
+</ul>
+
+<!-- ============ 目次 ============ -->
+<div class="toc">
+  <strong>目次</strong>
+  <ol>
+    <li><a href="#sec0">0. React とは — なぜ「コンポーネント」なのか</a></li>
+    <li><a href="#sec1">1. 準備: ビルドなしで React を動かす仕組み（CDN + Babel）</a></li>
+    <li><a href="#sec2">2. 最初のコンポーネント — 「JSX を返す関数」</a></li>
+    <li><a href="#sec3">3. 画面に表示する — createRoot と render</a></li>
+    <li><a href="#sec4">4. JSX のルール（HTML との違い）</a></li>
+    <li><a href="#sec5">5. 波括弧 { } で JavaScript を埋め込む</a></li>
+    <li><a href="#sec6">6. コンポーネントの入れ子（合成）</a></li>
+    <li><a href="#sec7">7. リストを map で描く（key の話）</a></li>
+    <li><a href="#sec8">8. つまずきポイント早見表</a></li>
+    <li><a href="#sec9">9. 演習へ</a></li>
+  </ol>
+</div>
+
+<!-- ============ 0 ============ -->
+<h2 id="sec0">0. React とは — なぜ「コンポーネント」なのか</h2>
+
+<p><strong>React</strong> は「ユーザーインターフェース（画面）」を作るための JavaScript ライブラリです。
+React の世界では、画面を<strong>コンポーネント（component＝部品）</strong>という小さな単位に分けて組み立てます。</p>
+
+<p>たとえば普通の Web ページを思い浮かべてください。ヘッダー、検索ボックス、商品カード、フッター……。
+これらを<strong>1つずつ「部品」として作り</strong>、それを組み合わせてページ全体にします。</p>
+
+<div class="why">
+<strong>なぜ部品にするのか:</strong>
+<ul>
+  <li><strong>再利用できる</strong>: 「商品カード」を1個作れば、100個でも <code>map</code> で量産できる。</li>
+  <li><strong>分かりやすい</strong>: 巨大な HTML を1枚で書くより、小さな部品に分けた方が読みやすく直しやすい。</li>
+  <li><strong>データと見た目をまとめられる</strong>: 「このデータをこう表示する」を部品の中に閉じ込められる。</li>
+</ul>
+</div>
+
+<p>そして React のコンポーネントは、特別なものではなく<strong>ただの JavaScript の関数</strong>です。
+「<strong>画面の見た目（JSX）を return する関数</strong>」、これが React コンポーネントの正体です。</p>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+<!-- ============ 1 ============ -->
+<h2 id="sec1">1. 準備: ビルドなしで React を動かす仕組み（CDN + Babel）</h2>
+
+<p>本格的な React 開発では <code>npm</code> で道具一式をインストールしますが、今回は<strong>学習に集中するため、インストール不要の最短ルート</strong>で動かします。
+HTML の中で次の3つを読み込むだけです。</p>
+
+<pre><code>&lt;!-- ① React 本体（コンポーネントを作る機能） --&gt;
+&lt;script src="https://unpkg.com/react@18/umd/react.development.js"&gt;&lt;/script&gt;
+&lt;!-- ② ReactDOM（作った部品を実際の画面に描く機能） --&gt;
+&lt;script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"&gt;&lt;/script&gt;
+&lt;!-- ③ Babel（JSX をブラウザが分かる JS に翻訳する道具） --&gt;
+&lt;script src="https://unpkg.com/@babel/standalone/babel.min.js"&gt;&lt;/script&gt;</code></pre>
+
+<p>そして自分のコードは <code>&lt;script type="text/babel"&gt;</code> の中に書きます。
+こうすると Babel が<strong>その場で JSX を翻訳</strong>してくれます。</p>
+
+<div class="note">
+<strong>用語: Babel（バベル）とは</strong> — 「新しい書き方や JSX を、ブラウザが理解できる普通の JavaScript に<strong>翻訳</strong>する道具」です。
+ブラウザは JSX（後述）をそのままでは読めないので、翻訳役が必要になります。今回は手軽さ優先で<strong>ブラウザ上で翻訳</strong>していますが、
+実務ではあらかじめ翻訳（ビルド）しておく方式（Vite など）を使います。これは Day12 以降で扱います。
+</div>
+
+<div class="warn">
+<strong>注意:</strong> この CDN 方式は<strong>学習用</strong>です。動作はネット接続が必要で、本番では使いません。
+「まず React の考え方に慣れる」ことが目的です。
+</div>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+<!-- ============ 2 ============ -->
+<h2 id="sec2">2. 最初のコンポーネント — 「JSX を返す関数」</h2>
+
+<p>コンポーネントは「<strong>JSX を return する関数</strong>」です。さっそく一番小さい例を見ましょう。</p>
+
+<pre><code>function Greeting() {
+  return &lt;h1&gt;こんにちは、React!&lt;/h1&gt;;
+}</code></pre>
+
+<p>この <code>&lt;h1&gt;こんにちは、React!&lt;/h1&gt;</code> の部分が <strong>JSX</strong> です。
+HTML のように見えますが、これは JavaScript の中に書ける「見た目を表す式」です（詳しくは <a href="#sec4">セクション4</a>）。</p>
+
+<div class="warn">
+<strong>超重要ルール: コンポーネント名は必ず大文字で始める。</strong>
+<code>Greeting</code> は OK、<code>greeting</code> は NG です。
+React は「大文字で始まる名前＝自作コンポーネント」「小文字＝普通の HTML タグ（<code>div</code> など）」として区別します。
+小文字で書くと、ただの HTML タグだと誤解されて表示されません。
+</div>
+
+<p>複数行の JSX を返すときは、<strong>丸カッコ <code>( )</code> で囲む</strong>のが定番です（return の直後で改行するとエラーになりやすいため）。</p>
+
+<pre><code>function Profile() {
+  return (
+    &lt;div&gt;
+      &lt;h2&gt;山田 太郎&lt;/h2&gt;
+      &lt;p&gt;React を学習中です&lt;/p&gt;
+    &lt;/div&gt;
+  );
+}</code></pre>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+<!-- ============ 3 ============ -->
+<h2 id="sec3">3. 画面に表示する — createRoot と render</h2>
+
+<p>コンポーネントを作っただけでは画面には出ません。「<strong>どの場所に</strong>」「<strong>何を</strong>」描くかを ReactDOM に指示します。</p>
+
+<pre><code>&lt;!-- HTML 側: 描画先となる「空の箱」を用意 --&gt;
+&lt;div id="root"&gt;&lt;/div&gt;</code></pre>
+
+<pre><code>// JS 側: その箱に Greeting を描く
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(&lt;Greeting /&gt;);</code></pre>
+
+<div class="why">
+<strong>1行ずつ:</strong>
+<ul>
+  <li><code>document.getElementById("root")</code> … HTML 内の <code>id="root"</code> の箱を取得。</li>
+  <li><code>ReactDOM.createRoot(...)</code> … その箱を「React が管理する描画先（root）」にする。</li>
+  <li><code>root.render(&lt;Greeting /&gt;)</code> … その中に <code>Greeting</code> コンポーネントを描く。</li>
+</ul>
+<strong>自作コンポーネントは <code>&lt;Greeting /&gt;</code> のように「タグの形」で呼び出す</strong>のがポイントです（<code>Greeting()</code> と関数呼び出しはしません）。
+</div>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+<!-- ============ 4 ============ -->
+<h2 id="sec4">4. JSX のルール（HTML との違い）</h2>
+
+<p><strong>JSX</strong> は「JavaScript の中に HTML のような見た目を書ける記法」です。便利ですが、HTML と少しだけ違うルールがあります。
+（JSX 自体は Day05 でさらに深掘りします。ここでは最低限を押さえます。）</p>
+
+<table>
+  <tr><th>ルール</th><th>説明</th><th>例</th></tr>
+  <tr>
+    <td>① 必ず1つの要素で包む</td>
+    <td>return する JSX は「親1個」にまとめる。並べたいときは <code>&lt;div&gt;</code> か空タグ <code>&lt;&gt;&lt;/&gt;</code> で囲む。</td>
+    <td><code>&lt;&gt;...&lt;/&gt;</code></td>
+  </tr>
+  <tr>
+    <td>② タグは必ず閉じる</td>
+    <td>HTML で省略できる <code>&lt;br&gt;</code> なども、JSX では <code>&lt;br /&gt;</code> と閉じる。</td>
+    <td><code>&lt;img src="..." /&gt;</code></td>
+  </tr>
+  <tr>
+    <td>③ class ではなく className</td>
+    <td><code>class</code> は JS の予約語なので、CSS クラスは <code>className</code> と書く。</td>
+    <td><code>&lt;p className="msg"&gt;</code></td>
+  </tr>
+</table>
+
+<div class="note">
+<strong>空タグ <code>&lt;&gt;&lt;/&gt;</code> とは</strong> — 「フラグメント」と呼ばれる、画面に余計な箱を作らずに複数要素をまとめるための入れ物です。
+「1個に包みたいけど <code>div</code> は増やしたくない」ときに使います。
+</div>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+<!-- ============ 5 ============ -->
+<h2 id="sec5">5. 波括弧 { } で JavaScript を埋め込む</h2>
+
+<p>JSX の中で <strong><code>{ }</code> を書くと、その中は JavaScript として評価</strong>されます。
+変数の値や計算結果を、見た目の中に差し込めます。</p>
+
+<pre><code>function Welcome() {
+  const name = "Taro";
+  const year = 2026;
+  return &lt;p&gt;{name} さん、{year} 年へようこそ！&lt;/p&gt;;
+  //        ↑ 変数      ↑ 変数
+}
+// 表示: 「Taro さん、2026 年へようこそ！」</code></pre>
+
+<p><code>{ }</code> の中には「<strong>値になるもの（式）</strong>」なら何でも書けます。計算、関数呼び出し、三項演算子などもOKです。</p>
+
+<pre><code>function Price() {
+  const price = 1200;
+  return &lt;p&gt;税込: {Math.floor(price * 1.1)} 円&lt;/p&gt;; // 計算もできる → 税込: 1320 円
+}</code></pre>
+
+<h3>条件で表示を変える（三項演算子）</h3>
+
+<p>「点数が60以上なら合格、そうでなければ不合格」のように、<strong>条件によって表示を切り替えたい</strong>場面はとても多いです。
+JavaScript には <code>if</code> 文がありますが、<a href="#sec5">先ほど触れたとおり</a> JSX の <code>{ }</code> の中には「<strong>文</strong>」は入れられず「<strong>式（値になるもの）</strong>」しか書けません。
+そこで活躍するのが <strong>三項演算子（さんこうえんざんし / ternary operator）</strong>です。これは「<strong>if と else を1つの式にまとめたもの</strong>」と考えてください。</p>
+
+<h4>書き方</h4>
+<pre><code>条件 ? 条件がtrueのときの値 : 条件がfalseのときの値</code></pre>
+
+<p>「<strong>?</strong>（もし〜なら）」と「<strong>:</strong>（そうでなければ）」の2つの記号で3つの部分をつなぐので「三項」演算子と呼びます。
+読むときは「<strong>条件 ？ こっち ： あっち</strong>」と覚えると分かりやすいです。</p>
+
+<h4>if 文と見比べる</h4>
+<pre><code>// ① if 文（これは「文」。値にならないので JSX の { } には入れられない）
+let label;
+if (score &gt;= 60) {
+  label = "合格";
+} else {
+  label = "不合格";
+}
+
+// ② 三項演算子（これは「式」。1つの値になるので { } に入れられる）
+const label = score &gt;= 60 ? "合格" : "不合格";</code></pre>
+
+<div class="why">
+<strong>同じことを表しています。</strong> ① の「<code>if</code> で <code>label</code> に代入する」処理を、② は<strong>1行の式</strong>に凝縮しています。
+<code>score</code> が 72 なら <code>"合格"</code>、49 なら <code>"不合格"</code> という<strong>1つの値</strong>に決まるので、そのまま <code>{ }</code> に入れられます。
+</div>
+
+<h4>JSX の中で使う</h4>
+<pre><code>function Result() {
+  const score = 72;
+  return &lt;p&gt;{score &gt;= 60 ? "合格" : "不合格"}&lt;/p&gt;;
+  //          └─ 条件 ─┘   └true┘   └false┘
+}
+// score が 72 なので「合格」と表示される</code></pre>
+
+<p>返す値は文字列だけでなく、<strong>JSX そのもの</strong>でも構いません（タグを丸ごと切り替えられます）:</p>
+<pre><code>function Status() {
+  const isLoggedIn = true;
+  return (
+    &lt;div&gt;
+      {isLoggedIn
+        ? &lt;span&gt;ようこそ！&lt;/span&gt;   // true のとき返す JSX
+        : &lt;a href="/login"&gt;ログイン&lt;/a&gt;} // false のとき返す JSX
+    &lt;/div&gt;
+  );
+}</code></pre>
+
+<h4>map と組み合わせる（演習5で使います）</h4>
+<p>三項演算子は <code>map</code> の中で「1件ごとに表示を変える」のにそのまま使えます:</p>
+<pre><code>const students = [
+  { id: 1, name: "Taro",   score: 82 },
+  { id: 2, name: "Hanako", score: 49 },
+];
+
+// 各 student の score を見て「合格 / 不合格」を出し分ける
+{students.map((student) =&gt; (
+  &lt;li key={student.id}&gt;
+    {student.name}: {student.score &gt;= 60 ? "合格" : "不合格"}
+  &lt;/li&gt;
+))}
+// Taro: 合格 / Hanako: 不合格</code></pre>
+
+<div class="note">
+<strong>「片方だけ表示／非表示」したいとき:</strong> 「条件が true のときだけ出す（false なら何も出さない）」場合は、
+三項演算子の代わりに <code>&amp;&amp;</code> を使うこともできます。例: <code>{isError &amp;&amp; &lt;p&gt;エラーです&lt;/p&gt;}</code>。
+ただし数値の <code>0</code> など「falsy な値」が左にあると <code>0</code> がそのまま表示される落とし穴があるので、慣れるまでは三項演算子の方が安全です。
+</div>
+
+<div class="warn">
+<strong>{ } に入れられるのは「式（値になるもの）」だけ。</strong>
+<code>if</code> 文や <code>for</code> 文のような「文」はそのままでは入れられません。
+条件分岐は<strong>三項演算子</strong>、繰り返しは<strong><code>map</code></strong>（次のセクション）を使うのが React 流です。
+</div>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+<!-- ============ 6 ============ -->
+<h2 id="sec6">6. コンポーネントの入れ子（合成）</h2>
+
+<p>コンポーネントの真価は「<strong>部品を組み合わせて大きな部品を作れる</strong>」ことです。
+作ったコンポーネントは、別のコンポーネントの中で<strong>タグのように</strong>使えます。</p>
+
+<pre><code>function Header() {
+  return &lt;header&gt;サイトのヘッダー&lt;/header&gt;;
+}
+
+function Footer() {
+  return &lt;footer&gt;© 2026&lt;/footer&gt;;
+}
+
+// Header と Footer を「部品」として組み合わせる
+function Page() {
+  return (
+    &lt;div&gt;
+      &lt;Header /&gt;
+      &lt;main&gt;ここが本文です&lt;/main&gt;
+      &lt;Footer /&gt;
+    &lt;/div&gt;
+  );
+}</code></pre>
+
+<div class="why">
+<strong>これが「合成（composition）」です。</strong> 小さな部品（<code>Header</code> / <code>Footer</code>）を組み合わせて、
+大きな部品（<code>Page</code>）を作る。React のアプリは、結局この「部品の入れ子」を積み重ねた1本の木（ツリー）になります。
+</div>
+
+<div class="note">
+今回はまだ「外からデータを渡す」方法（<strong>props</strong>）を学んでいないので、各部品は中に固定のデータを持っています。
+「部品に値を渡して中身を変える」のは Day06（Props）で学びます。今日は<strong>「作る・組み合わせる・繰り返す」</strong>に集中しましょう。
+</div>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+<!-- ============ 7 ============ -->
+<h2 id="sec7">7. リストを map で描く（key の話）</h2>
+
+<p>Day03 で学んだ <code>map</code> が、ここでついに React で活躍します。
+<strong>配列を「JSX 要素の配列」に変換</strong>すれば、そのまま画面にリスト表示できます。</p>
+
+<pre><code>function FruitList() {
+  const fruits = ["りんご", "みかん", "ぶどう"];
+  return (
+    &lt;ul&gt;
+      {fruits.map((fruit) =&gt; (
+        &lt;li key={fruit}&gt;{fruit}&lt;/li&gt;
+      ))}
+    &lt;/ul&gt;
+  );
+}</code></pre>
+
+<div class="why">
+<strong>流れ:</strong> <code>["りんご","みかん","ぶどう"]</code> を <code>map</code> で
+<code>[&lt;li&gt;りんご&lt;/li&gt;, &lt;li&gt;みかん&lt;/li&gt;, &lt;li&gt;ぶどう&lt;/li&gt;]</code> という<strong>JSX の配列</strong>に変換し、
+<code>&lt;ul&gt;</code> の中に <code>{ }</code> で埋め込んでいます。Day03 の <code>map</code> がそのまま使えています。
+</div>
+
+<div class="warn">
+<strong>key（キー）を必ず付ける。</strong> <code>map</code> で要素を並べるときは、各要素に <code>key</code> という特別な属性を付けます。
+React が「どれがどれか」を見分けて効率よく更新するための<strong>目印</strong>です。
+普通は<strong>データが持つ一意な id</strong>（例: <code>key={user.id}</code>）を使います。無いと警告が出ます。
+</div>
+
+<p>オブジェクトの配列なら、id を key に使うのが定番です:</p>
+<pre><code>const users = [
+  { id: 1, name: "Taro" },
+  { id: 2, name: "Hanako" },
+];
+// ...
+{users.map((user) =&gt; (
+  &lt;li key={user.id}&gt;{user.name}&lt;/li&gt;
+))}</code></pre>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+<!-- ============ 8 ============ -->
+<h2 id="sec8">8. つまずきポイント早見表</h2>
+
+<table>
+  <tr><th>症状</th><th>原因</th><th>直し方</th></tr>
+  <tr><td>コンポーネントが表示されない</td><td>名前が小文字（<code>greeting</code>）</td><td>大文字始まりにする（<code>Greeting</code>）</td></tr>
+  <tr><td>「Adjacent JSX elements...」エラー</td><td>要素を1個に包んでいない</td><td><code>&lt;div&gt;</code> か <code>&lt;&gt;&lt;/&gt;</code> で囲む</td></tr>
+  <tr><td>className を class と書いて警告</td><td>JSX のルール違反</td><td><code>className</code> にする</td></tr>
+  <tr><td>「Each child ... key」警告</td><td><code>map</code> に key が無い</td><td><code>key={一意な値}</code> を付ける</td></tr>
+  <tr><td>return の次の行から書いて空表示</td><td>return 直後の改行で空が返る</td><td>return の直後を <code>(</code> にする</td></tr>
+</table>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+<!-- ============ 9 ============ -->
+<h2 id="sec9">9. 演習へ</h2>
+
+<p>解説を読んだら、<strong><code>Day04/exercise.html</code> をブラウザで開いて</strong>演習に進んでください。
+ファイルをダブルクリックするか、ブラウザにドラッグ＆ドロップで開けます（Node.js での実行はしません）。</p>
+
+<p>演習ページには各課題の<strong>合否（✅/❌）が自動表示</strong>されます。未回答のところはエラーにならず「未回答」と出ます。
+書けたらコードを貼ってもらえればレビューします（<strong>模範解答は出しません</strong>）。今回は Day03 より少し歯ごたえのある課題にしてあります。</p>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+</body>
+</html>
