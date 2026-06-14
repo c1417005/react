@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 05 — JSX の書き方</title>
+<style>
+  :root {
+    --react: #61dafb;
+    --react-dark: #0a7ea4;
+    --accent: #7c5cff;
+    --ink: #1a1f2e;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: system-ui, "Segoe UI", "Hiragino Sans", "Meiryo", sans-serif;
+         line-height: 1.9; max-width: 880px; margin: 0 auto; padding: 0 20px 80px;
+         color: var(--ink);
+         background: linear-gradient(180deg, #eef6ff 0%, #faf7ff 30%, #fafafa 100%);
+         background-attachment: fixed; }
+
+  /* ===== ヒーローバナー ===== */
+  .hero { margin: 0 -20px 8px; padding: 44px 28px 36px;
+          background: linear-gradient(135deg, #0a2540 0%, #11324f 45%, #1d2a6b 100%);
+          color: #fff; text-align: center; position: relative; overflow: hidden;
+          border-radius: 0 0 28px 28px; box-shadow: 0 14px 40px rgba(13,40,80,.28); }
+  .hero::before { content: "⚛"; position: absolute; font-size: 360px; line-height: 1;
+          top: -90px; right: -80px; color: rgba(97,218,251,.10);
+          transform: rotate(8deg); pointer-events: none; }
+  .hero .badge { display: inline-block; background: rgba(97,218,251,.18);
+          color: var(--react); border: 1px solid rgba(97,218,251,.5);
+          padding: 4px 14px; border-radius: 999px; font-size: .8em;
+          font-weight: 700; letter-spacing: .08em; margin-bottom: 14px; }
+  .hero h1 { border: none; margin: 0 0 10px; font-size: 2.1em; line-height: 1.3;
+          background: linear-gradient(90deg, #fff 0%, var(--react) 100%);
+          -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+  .hero p.lead { margin: 0 auto; max-width: 620px; color: #cfe4f5; font-size: 1.02em; }
+  .hero .streak { margin-top: 18px; font-size: .92em; color: #ffd86b; font-weight: 700; }
+
+  /* ===== 進捗バー ===== */
+  .progress-wrap { margin: 26px 0 8px; }
+  .progress-wrap .label { font-size: .82em; font-weight: 700; color: var(--react-dark);
+          display: flex; justify-content: space-between; margin-bottom: 6px; }
+  .progress-bar { height: 12px; background: #e3ecf5; border-radius: 999px; overflow: hidden;
+          box-shadow: inset 0 1px 3px rgba(0,0,0,.08); }
+  .progress-bar > span { display: block; height: 100%; width: 55%;
+          background: linear-gradient(90deg, var(--react) 0%, var(--accent) 100%);
+          border-radius: 999px; }
+
+  h2 { margin-top: 52px; padding: 12px 18px; font-size: 1.45em;
+       background: #fff; border-radius: 14px; border: 1px solid #e2e8f2;
+       border-left: 7px solid var(--react);
+       box-shadow: 0 4px 14px rgba(30,60,110,.06); scroll-margin-top: 16px; }
+  h3 { margin-top: 30px; color: var(--react-dark); font-size: 1.15em; }
+  h3::before { content: "▸ "; color: var(--accent); }
+  h4 { margin-top: 20px; margin-bottom: 4px; }
+  p { margin: 12px 0; }
+  code { background: #eef1f4; padding: 2px 6px; border-radius: 5px;
+         font-family: "Consolas", "SFMono-Regular", monospace; font-size: 0.92em;
+         color: #b5278a; }
+  pre { background: #16182a; color: #e6e6e6; padding: 18px; border-radius: 12px;
+        overflow-x: auto; line-height: 1.6; box-shadow: 0 8px 24px rgba(20,24,50,.22);
+        border: 1px solid #2b2f4a; position: relative; }
+  pre::before { content: "JSX"; position: absolute; top: 8px; right: 12px;
+        font-size: .7em; letter-spacing: .1em; color: #5b6090; font-weight: 700; }
+  pre code { background: none; padding: 0; color: inherit; font-size: 0.9em; }
+
+  .toc { background: #fff; border: 1px solid #e2e8f2; border-radius: 16px;
+         padding: 18px 28px; box-shadow: 0 6px 20px rgba(30,60,110,.07); }
+  .toc > strong { font-size: 1.05em; color: var(--react-dark); }
+  .toc ol { margin: 10px 0; padding-left: 22px; }
+  .toc li { margin: 4px 0; }
+  .toc a { text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+
+  .note { background: #fffbe6; border-left: 5px solid #f0c000; padding: 12px 18px;
+          border-radius: 0 10px 10px 0; margin: 18px 0; }
+  .why { background: #eefdf3; border-left: 5px solid #0b5; padding: 12px 18px;
+         border-radius: 0 10px 10px 0; margin: 18px 0; }
+  .warn { background: #fdeeee; border-left: 5px solid #d33; padding: 12px 18px;
+          border-radius: 0 10px 10px 0; margin: 18px 0; }
+  .cheer { background: linear-gradient(135deg, #fff0f6 0%, #f3f0ff 100%);
+           border: 1px solid #ecd9f5; border-radius: 14px; padding: 16px 20px;
+           margin: 22px 0; font-weight: 600; color: #6d3a8e;
+           box-shadow: 0 4px 14px rgba(124,92,255,.10); }
+  .cheer .big { font-size: 1.15em; }
+
+  .back { font-size: 0.85em; text-align: right; }
+  .back a { color: var(--react-dark); text-decoration: none;
+            background: #fff; border: 1px solid #d8e3f0; border-radius: 999px;
+            padding: 4px 14px; display: inline-block; }
+  .back a:hover { background: var(--react); color: #fff; border-color: var(--react); }
+  a { color: #0969da; }
+  table { border-collapse: collapse; margin: 18px 0; width: 100%;
+          background: #fff; border-radius: 12px; overflow: hidden;
+          box-shadow: 0 4px 14px rgba(30,60,110,.06); }
+  th, td { border: 1px solid #e6ecf4; padding: 9px 14px; text-align: left; }
+  th { background: linear-gradient(135deg, #0a7ea4 0%, #1d2a6b 100%); color: #fff;
+       border-color: rgba(255,255,255,.2); }
+  tr:nth-child(even) td { background: #f6f9fd; }
+
+  /* ===== ゴール CTA ===== */
+  .cta { margin: 28px 0; text-align: center; padding: 30px 24px;
+         background: linear-gradient(135deg, #0a2540 0%, #1d2a6b 100%);
+         color: #fff; border-radius: 20px; box-shadow: 0 12px 32px rgba(13,40,80,.25); }
+  .cta h2 { background: none; border: none; box-shadow: none; color: #fff;
+            margin: 0 0 8px; padding: 0; }
+  .cta a.btn { display: inline-block; margin-top: 14px; padding: 12px 30px;
+         background: linear-gradient(90deg, var(--react) 0%, var(--accent) 100%);
+         color: #08243a; font-weight: 800; text-decoration: none; border-radius: 999px;
+         box-shadow: 0 6px 18px rgba(97,218,251,.35); }
+  .cta a.btn:hover { transform: translateY(-2px); }
+</style>
+</head>
+<body>
+
+<div class="hero" id="top">
+  <span class="badge">DAY 05 / REACT 学習</span>
+  <h1>JSX を「なんとなく」から「説明できる」へ 🚀</h1>
+  <p class="lead">Day04 で雰囲気をつかんだ JSX を、今日はルールごと自分のものにします。
+  終わるころには、エラーが出ても「あ、これね」と原因が言えるようになります。</p>
+  <div class="streak">🔥 Day01 → Day05 まで継続中！この調子でいきましょう</div>
+</div>
+
+<div class="progress-wrap">
+  <div class="label"><span>カリキュラム進捗</span><span>Day 05 / 全行程</span></div>
+  <div class="progress-bar"><span></span></div>
+</div>
+
+<div class="cheer">
+  <span class="big">🎯 今日のゴール:</span> JSX の5大ポイント
+  ──「属性（<code>""</code> と <code>{ }</code>）」「<code>style</code> の <code>{{ }}</code>」「フラグメント <code>&lt;&gt;&lt;/&gt;</code>」「<code>{ }</code> に入るもの・入らないもの」「<code>className</code> など名前の違い」── を手を動かして攻略！
+</div>
+
+<div class="note">
+<strong>JSX とは（おさらい）:</strong> JavaScript の中に HTML のような「見た目」を書ける記法です。
+見た目（マークアップ）と表示ロジック（JavaScript）を<strong>1つのコンポーネントにまとめて書ける</strong>のが利点です。
+ブラウザは JSX を直接読めないので、Day04 と同じく Babel が普通の JavaScript に翻訳します。
+</div>
+
+<p><strong>公式ドキュメント（一次情報 / react.dev）:</strong></p>
+<ul>
+  <li><a href="https://react.dev/learn/writing-markup-with-jsx">JSX でマークアップを書く</a></li>
+  <li><a href="https://react.dev/learn/javascript-in-jsx-with-curly-braces">波括弧で JSX に JavaScript を入れる</a></li>
+</ul>
+
+<!-- ============ 目次 ============ -->
+<div class="toc">
+  <strong>目次</strong>
+  <ol>
+    <li><a href="#sec0">0. なぜ JSX？ — 見た目とロジックを同じ場所に</a></li>
+    <li><a href="#sec1">1. JSX の3大ルール</a></li>
+    <li><a href="#sec2">2. フラグメント &lt;&gt;&lt;/&gt; — 余計な箱を増やさず包む</a></li>
+    <li><a href="#sec3">3. 属性に「文字列」を渡す（" "）</a></li>
+    <li><a href="#sec4">4. 属性に「JavaScript」を渡す（{ }）</a></li>
+    <li><a href="#sec5">5. style は二重波括弧 {{ }}</a></li>
+    <li><a href="#sec6">6. { } に入れられるもの・入れられないもの</a></li>
+    <li><a href="#sec7">7. HTML と名前が違う属性（className など）</a></li>
+    <li><a href="#sec8">8. JSX の中のコメント {/* */}</a></li>
+    <li><a href="#sec9">9. つまずきポイント早見表</a></li>
+    <li><a href="#sec10">10. 演習へ</a></li>
+  </ol>
+</div>
+
+<!-- ============ 0 ============ -->
+<h2 id="sec0">0. なぜ JSX？ — 見た目とロジックを同じ場所に</h2>
+
+<p>昔の Web 開発では「HTML（見た目）」と「JavaScript（動き）」を別ファイルに分けるのが普通でした。
+しかし実際には、<strong>ボタンの見た目とそのクリック処理</strong>のように、両者は密接に関わっています。
+React は「<strong>関係するものは一緒に置く</strong>」という考えで、見た目（マークアップ）とロジックを<strong>コンポーネントという1つの単位</strong>にまとめます。その「見た目」を書くための記法が JSX です。</p>
+
+<div class="why">
+JSX は <strong>HTML にそっくり</strong>ですが、中身は <strong>JavaScript</strong> です。だから <code>{ }</code> を使えば、変数・計算・条件などをそのまま見た目に差し込めます（Day04 で学んだ通り）。
+「HTML に JS の力が加わったもの」とイメージすると分かりやすいです。
+</div>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+<!-- ============ 1 ============ -->
+<h2 id="sec1">1. JSX の3大ルール</h2>
+
+<p>JSX は HTML に似ていますが、JavaScript なので守るべきルールが3つあります。Day04 でも触れましたが、ここで理由までしっかり押さえましょう。</p>
+
+<h3>ルール① 必ず「1つの親要素」で包む</h3>
+<p>コンポーネントが return できる JSX は<strong>1個だけ</strong>です。要素を並べたいときは <code>&lt;div&gt;</code> やフラグメント <code>&lt;&gt;&lt;/&gt;</code> で包みます。</p>
+<pre><code>// ✕ NG: 兄弟要素を2つ返している
+return (
+  &lt;h1&gt;タイトル&lt;/h1&gt;
+  &lt;p&gt;本文&lt;/p&gt;
+);
+
+// ◯ OK: 1つの親で包む
+return (
+  &lt;div&gt;
+    &lt;h1&gt;タイトル&lt;/h1&gt;
+    &lt;p&gt;本文&lt;/p&gt;
+  &lt;/div&gt;
+);</code></pre>
+<div class="why">
+<strong>なぜ？</strong> JSX は内部的に「1個のオブジェクト」に変換されます。関数が値を2個同時に return できないのと同じで、JSX も「1個」にまとめる必要があるのです。
+</div>
+
+<h3>ルール② すべてのタグを閉じる</h3>
+<p>HTML では <code>&lt;br&gt;</code> や <code>&lt;img&gt;</code> を閉じなくても動きますが、JSX では<strong>必ず閉じます</strong>。
+中身のないタグは <code>&lt;img /&gt;</code> のように<strong>末尾に <code>/</code></strong>（自己閉じ）を付けます。</p>
+<pre><code>// ✕ &lt;img src="cat.png"&gt;        ← 閉じていない
+// ◯ &lt;img src="cat.png" /&gt;     ← 自己閉じ
+// ◯ &lt;li&gt;りんご&lt;/li&gt;            ← 開いて閉じる</code></pre>
+
+<h3>ルール③ 属性は camelCase（キャメルケース）で書く</h3>
+<p>JSX の属性名の多くは、HTML と少し違って<strong>「途中で大文字にする」書き方</strong>（camelCase）になります。
+特に <code>class</code> は JavaScript の予約語なので <code>className</code> と書きます（詳しくは <a href="#sec7">セクション7</a>）。</p>
+<pre><code>// HTML:  &lt;label class="title" for="name" tabindex="0"&gt;
+// JSX :  &lt;label className="title" htmlFor="name" tabIndex={0}&gt;</code></pre>
+
+<div class="note">
+<strong>camelCase（キャメルケース）とは:</strong> <code>fontSize</code> のように「単語の区切りを大文字にする」書き方です。
+ラクダ（camel）の背中のコブのように見えることから命名されています。<code>onclick</code> → <code>onClick</code> なども同じ仲間です。
+</div>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+<!-- ============ 2 ============ -->
+<h2 id="sec2">2. フラグメント &lt;&gt;&lt;/&gt; — 余計な箱を増やさず包む</h2>
+
+<p>ルール①で「1つの親で包む」と学びましたが、そのために毎回 <code>&lt;div&gt;</code> を足すと、
+画面に<strong>意味のない箱</strong>が増えてしまいます。そんなときは<strong>フラグメント</strong>を使います。</p>
+
+<pre><code>function Info() {
+  return (
+    &lt;&gt;
+      &lt;h2&gt;お知らせ&lt;/h2&gt;
+      &lt;p&gt;本日は晴天です&lt;/p&gt;
+    &lt;/&gt;
+  );
+}</code></pre>
+
+<div class="why">
+<code>&lt;&gt;...&lt;/&gt;</code> は「<strong>中身をまとめるだけで、自分自身は画面に何も出さない</strong>」特別な入れ物です。
+<code>&lt;div&gt;</code> で包むと HTML に <code>&lt;div&gt;</code> が増えますが、フラグメントなら増えません。「1個に包む条件は満たしたいが、余計なタグは出したくない」ときの定番です。
+</div>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+<!-- ============ 3 ============ -->
+<h2 id="sec3">3. 属性に「文字列」を渡す（" "）</h2>
+
+<p>属性の値が<strong>ただの文字列</strong>なら、HTML と同じくダブルクォート <code>" "</code> で書きます。</p>
+
+<pre><code>function Avatar() {
+  return &lt;img className="avatar" src="cat.png" alt="うちの猫" /&gt;;
+}</code></pre>
+
+<p>ここまでは HTML とほぼ同じです。問題は「<strong>属性に変数や計算結果を渡したい</strong>」とき。次のセクションへ。</p>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+<!-- ============ 4 ============ -->
+<h2 id="sec4">4. 属性に「JavaScript」を渡す（{ }）</h2>
+
+<p>属性の値を<strong>変数や式で決めたい</strong>ときは、<code>" "</code> の代わりに <code>{ }</code> で囲みます。
+Day04 で学んだ「JSX の中身に値を差し込む <code>{ }</code>」と同じものを、<strong>属性にも使える</strong>と考えてください。</p>
+
+<pre><code>function Avatar() {
+  const imageUrl = "https://example.com/cat.png";
+  const altText = "うちの猫";
+  return &lt;img src={imageUrl} alt={altText} /&gt;;
+  //          ↑ 変数        ↑ 変数
+}</code></pre>
+
+<div class="warn">
+<strong>" " と { } を混ぜない。</strong> <code>src="{imageUrl}"</code> と書くと、<strong>「{imageUrl}」という文字列そのもの</strong>が src になってしまいます（変数として扱われない）。
+変数を渡すなら<strong>クォートは付けず <code>src={imageUrl}</code></strong> です。
+</div>
+
+<h3>文字列と変数を混ぜたいとき</h3>
+<p>「<code>https://.../</code> + ユーザーID」のようにつなげたいときは、<code>{ }</code> の中で<strong>テンプレートリテラル</strong>（バッククォート）を使います。</p>
+<pre><code>const userId = 42;
+return &lt;img src={`https://example.com/users/${userId}.png`} /&gt;;
+//            ↑ { } の中は JavaScript なので、バッククォートが使える</code></pre>
+<div class="note">
+Day04 の演習5で「JSX のテキストにバッククォートを書いても効かない」と学びましたね。
+ポイントは<strong>「<code>{ }</code> の中＝JavaScript」</strong>。<code>{ }</code> の中ならテンプレートリテラルが正しく働きます。場所の違いが鍵です。
+</div>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+<!-- ============ 5 ============ -->
+<h2 id="sec5">5. style は二重波括弧 {{ }}</h2>
+
+<p>インライン（その場で書く）スタイルを当てるときは、少し特殊な見た目になります。</p>
+
+<pre><code>function Title() {
+  return (
+    &lt;h1 style={{ color: "red", fontSize: "24px" }}&gt;
+      赤い見出し
+    &lt;/h1&gt;
+  );
+}</code></pre>
+
+<div class="why">
+<strong>なぜ波括弧が2つ？</strong> 分解すると理解できます。
+<ul>
+  <li><strong>外側の <code>{ }</code></strong> … 「ここから JavaScript ですよ」の合図（属性に JS を渡す <code>{ }</code>）。</li>
+  <li><strong>内側の <code>{ }</code></strong> … JavaScript の<strong>オブジェクト</strong>（<code>{ キー: 値 }</code> の形）。</li>
+</ul>
+つまり <code>style={ &lt;オブジェクト&gt; }</code> で、その中身が <code>{ color: "red" }</code> というオブジェクト。
+合わせて <code>style={{ color: "red" }}</code> になります。「2つ」ではなく「<strong>JS の合図</strong>」＋「<strong>オブジェクト</strong>」です。
+</div>
+
+<div class="note">
+<strong>CSS プロパティ名も camelCase。</strong> CSS の <code>font-size</code> はハイフンが使えないので <code>fontSize</code>、
+<code>background-color</code> は <code>backgroundColor</code> と書きます。値は文字列（<code>"24px"</code>）にします。
+</div>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+<!-- ============ 6 ============ -->
+<h2 id="sec6">6. { } に入れられるもの・入れられないもの</h2>
+
+<p><code>{ }</code> の中に書けるのは「<strong>式（evaluate すると1つの値になるもの）</strong>」だけ、というのが最重要ルールです（Day04 でも登場）。</p>
+
+<table>
+  <tr><th>入れられる（式）</th><th>例</th></tr>
+  <tr><td>変数</td><td><code>{name}</code></td></tr>
+  <tr><td>計算</td><td><code>{price * 1.1}</code></td></tr>
+  <tr><td>関数呼び出し</td><td><code>{formatDate(today)}</code></td></tr>
+  <tr><td>三項演算子</td><td><code>{ok ? "○" : "×"}</code></td></tr>
+  <tr><td>&amp;&amp; による条件表示</td><td><code>{count &gt; 0 &amp;&amp; &lt;p&gt;あり&lt;/p&gt;}</code></td></tr>
+  <tr><td>配列の map</td><td><code>{items.map(...)}</code></td></tr>
+</table>
+
+<table>
+  <tr><th>入れられない（文）</th><th>理由</th></tr>
+  <tr><td><code>if (...) { }</code></td><td>「文」であって値にならない → 三項演算子か <code>&amp;&amp;</code> を使う</td></tr>
+  <tr><td><code>for (...) { }</code></td><td>「文」であって値にならない → <code>map</code> を使う</td></tr>
+  <tr><td><code>const x = 1</code></td><td>代入は「文」 → JSX の外（return の前）で書く</td></tr>
+</table>
+
+<h3>&amp;&amp; による条件表示（片方だけ出す）</h3>
+<p>「条件が true のときだけ表示、false なら何も出さない」場合は <code>&amp;&amp;</code> が便利です。</p>
+<pre><code>function Inbox() {
+  const unread = 3;
+  return (
+    &lt;div&gt;
+      &lt;h2&gt;受信箱&lt;/h2&gt;
+      {unread &gt; 0 &amp;&amp; &lt;p&gt;未読が {unread} 件あります&lt;/p&gt;}
+    &lt;/div&gt;
+  );
+}
+// unread が 3 なので「未読が 3 件あります」が表示される
+// もし unread が 0 なら、&amp;&amp; の左が false になり、&lt;p&gt; は表示されない</code></pre>
+<div class="warn">
+<strong>&amp;&amp; の落とし穴:</strong> 左側が数値の <code>0</code> だと、<code>0</code> がそのまま画面に表示されてしまいます。
+「個数が 0 のとき何も出したくない」なら <code>{count &gt; 0 &amp;&amp; ...}</code> のように<strong>必ず true/false になる条件</strong>にしましょう（<code>{count &amp;&amp; ...}</code> は危険）。
+</div>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+<!-- ============ 7 ============ -->
+<h2 id="sec7">7. HTML と名前が違う属性（className など）</h2>
+
+<p>JSX は JavaScript なので、JavaScript の予約語とぶつかる属性名は別名になっています。よく使うものだけ覚えれば十分です。</p>
+
+<table>
+  <tr><th>HTML</th><th>JSX</th><th>メモ</th></tr>
+  <tr><td><code>class</code></td><td><code>className</code></td><td><code>class</code> は予約語。<strong>最頻出</strong></td></tr>
+  <tr><td><code>for</code></td><td><code>htmlFor</code></td><td><code>for</code> も予約語（ループの for）</td></tr>
+  <tr><td><code>onclick</code></td><td><code>onClick</code></td><td>イベントは camelCase（Day08 で本格的に）</td></tr>
+  <tr><td><code>tabindex</code></td><td><code>tabIndex</code></td><td>多くの属性が camelCase に</td></tr>
+</table>
+
+<div class="note">
+全部を暗記する必要はありません。<strong><code>class</code> → <code>className</code> だけは即答できる</strong>ようにしておけば、残りは出てきたときに調べればOKです。
+React は <code>class</code> と書くと開発中に警告を出してくれます。
+</div>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+<!-- ============ 8 ============ -->
+<h2 id="sec8">8. JSX の中のコメント {/* */}</h2>
+
+<p>JSX の中（タグの中身）にコメントを書くときは、<code>{/* ... */}</code> の形にします。
+これは「<code>{ }</code> の中に JavaScript のコメントを入れている」と考えると納得できます。</p>
+
+<pre><code>return (
+  &lt;div&gt;
+    {/* これは JSX 内のコメント。画面には出ない */}
+    &lt;h1&gt;こんにちは&lt;/h1&gt;
+  &lt;/div&gt;
+);</code></pre>
+
+<div class="warn">
+タグの中身で <code>// コメント</code> や <code>&lt;!-- コメント --&gt;</code> はそのまま<strong>文字として表示されたりエラー</strong>になります。
+JSX の中では必ず <code>{/* */}</code> を使ってください。
+</div>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+<!-- ============ 9 ============ -->
+<h2 id="sec9">9. つまずきポイント早見表</h2>
+
+<table>
+  <tr><th>症状</th><th>原因</th><th>直し方</th></tr>
+  <tr><td>class が効かない / 警告</td><td><code>class</code> と書いた</td><td><code>className</code> にする</td></tr>
+  <tr><td>変数を渡したのに文字列になる</td><td><code>src="{url}"</code> とクォートで囲んだ</td><td><code>src={url}</code>（クォートを外す）</td></tr>
+  <tr><td>style でエラー</td><td>波括弧が1つ / ハイフン名</td><td><code>style={{ fontSize: "16px" }}</code></td></tr>
+  <tr><td>「Adjacent JSX elements」</td><td>1つの親で包んでいない</td><td><code>&lt;&gt;&lt;/&gt;</code> か <code>&lt;div&gt;</code> で包む</td></tr>
+  <tr><td>0 が画面に出てしまう</td><td><code>{count &amp;&amp; ...}</code> で count が 0</td><td><code>{count &gt; 0 &amp;&amp; ...}</code> にする</td></tr>
+  <tr><td>コメントが画面に出る</td><td><code>//</code> や <code>&lt;!-- --&gt;</code> を使った</td><td><code>{/* */}</code> にする</td></tr>
+</table>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+<!-- ============ 10 ============ -->
+<div class="cta" id="sec10">
+  <h2>10. さあ、手を動かそう 💪</h2>
+  <p>解説を読んだら、いよいよ実践！<strong><code>Day05/exercise.html</code> をブラウザで開いて</strong>演習に進みましょう。
+  各課題の合否（✅/❌）と表示プレビューが<strong>自動で</strong>出ます。未回答は「未回答」と表示されます。</p>
+  <p>今回は JSX のルール（属性・<code>style</code>・<code>className</code>・フラグメント・条件表示）を実際に書いて確かめる課題です。
+  書けたらコードを貼ってください。良い点・改善点をレビューします（模範解答は出しません — 自分で気づくのが一番伸びます！）。</p>
+  <a class="btn" href="exercise.html">▶ 演習をはじめる</a>
+</div>
+
+<div class="cheer" style="text-align:center;">
+  ここまで読み切ったあなたは、もう JSX の「地図」を持っています。🗺️<br>
+  あとは書いて確かめるだけ。詰まっても大丈夫、それが学びのサインです。
+</div>
+
+<p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+</body>
+</html>

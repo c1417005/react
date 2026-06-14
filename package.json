@@ -8,6 +8,7 @@
     "day01": "node Day01/lesson.mjs",
     "day02": "node Day02/exercise.mjs",
     "day03": "node Day03/exercise.mjs",
-    "day04": "node -e \"console.log('Day04 はブラウザ学習です。Day04/exercise.html をブラウザで開いてください（lesson.html も同様）。')\""
+    "day04": "node -e \"console.log('Day04 はブラウザ学習です。Day04/exercise.html をブラウザで開いてください（lesson.html も同様）。')\"",
+    "day05": "node -e \"console.log('Day05 はブラウザ学習です。Day05/exercise.html をブラウザで開いてください（lesson.html も同様）。')\""
   }
 }

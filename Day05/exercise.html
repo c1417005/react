@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 05 — 演習: JSX の書き方</title>
+
+<!-- ① React 本体 / ② ReactDOM（画面描画・採点用） / ③ Babel(JSX翻訳) -->
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<style>
+  body { font-family: system-ui, "Segoe UI", "Hiragino Sans", "Meiryo", sans-serif;
+         line-height: 1.8; max-width: 900px; margin: 0 auto; padding: 24px 20px 80px;
+         color: #1a1a1a; background: #fafafa; }
+  h1 { border-bottom: 3px solid #61dafb; padding-bottom: 8px; }
+  .lead { background: #fffbe6; border-left: 5px solid #f0c000; padding: 10px 16px;
+          border-radius: 4px; margin: 16px 0; }
+  .card { background: #fff; border: 1px solid #ddd; border-radius: 8px;
+          padding: 16px 20px; margin: 18px 0; }
+  .card h2 { margin-top: 0; font-size: 1.1em; }
+  .status { font-weight: bold; padding: 2px 10px; border-radius: 999px; font-size: 0.9em; }
+  .pass { background: #e3f9e5; color: #0b5; border: 1px solid #0b5; }
+  .fail { background: #fdeeee; color: #d33; border: 1px solid #d33; }
+  .todo { background: #eef1f4; color: #555; border: 1px solid #bbb; }
+  .desc { color: #333; }
+  .preview { border: 1px dashed #aaa; border-radius: 6px; padding: 12px 16px;
+             margin-top: 10px; background: #fcfcfc; }
+  .preview-label { font-size: 0.8em; color: #888; margin-bottom: 4px; }
+  code { background: #eef1f4; padding: 2px 6px; border-radius: 4px;
+         font-family: "Consolas", monospace; font-size: 0.92em; }
+  pre { background: #1e1e1e; color: #e6e6e6; padding: 12px; border-radius: 6px;
+        overflow-x: auto; font-size: 0.85em; }
+  .hint { font-size: 0.88em; color: #555; }
+</style>
+</head>
+<body>
+
+<h1>Day 05 — 演習: JSX の書き方</h1>
+
+<div class="lead">
+  <strong>進め方:</strong> このファイル <code>Day05/exercise.html</code> をエディタで開き、各コンポーネントの
+  <code>return null;</code> を自分の JSX に置き換えて<strong>保存 → ブラウザで再読み込み</strong>してください。
+  下に各課題の合否（✅/❌）と表示プレビューが出ます。未回答は「未回答」と表示されます。<br>
+  解説は <code>Day05/lesson.html</code>。模範解答は出しません。書けたらコードを貼ってレビューに出してください。
+</div>
+
+<div id="results"></div>
+
+<!-- ===================================================================
+     ここから下が「あなたが編集する場所」です。
+==================================================================== -->
+<script type="text/babel" data-presets="react">
+
+// --- 演習1（やさしい）: className と自己閉じタグ ---------------------
+// HTML の <img class="thumb" src="..." alt="子猫"> を JSX に直してください。
+// ・class は JSX では何と書く？  ・閉じていないタグは？
+function Exercise1() {
+  // ここに JSX を書いてください
+  // 1行で <img ... /> を return する形でOK
+  return <img className="thumb" src ="..." alt = "子猫" />;
+  // 期待: class="thumb" の img（alt="子猫" 付き、自己閉じ）
+}
+
+
+// --- 演習2（ふつう）: 属性に変数を { } で渡す -----------------------
+// 変数 url を <a> の href に、label をリンク文字として表示してください。
+// ヒント: 文字列ではなく変数を渡すときはクォートを付けない（href={url}）。
+function Exercise2() {
+  const url = "https://react.dev";
+  const label = "React 公式サイト";
+
+  // ここに JSX を書いてください（<a href={...}>{...}</a>）
+  return <a href = {url}>{label}</a>;
+  // 期待: href が https://react.dev で、リンク文字が「React 公式サイト」
+}
+
+
+// --- 演習3（ふつう）: style は二重波括弧 {{ }} ----------------------
+// <p> に「文字色 red」「フォントサイズ 24px」のインラインスタイルを当てて、
+// 「重要なお知らせ」と表示してください。
+// ヒント: style={{ color: "red", fontSize: "24px" }}  ← CSS名は camelCase
+function Exercise3() {
+  // ここに JSX を書いてください
+  return <p style = {{color:"red",fontSize:"24px"}}>重要なお知らせ</p>;
+  // 期待: 赤色・24px で「重要なお知らせ」
+}
+
+
+// --- 演習4（ふつう）: フラグメント <></> で包む ---------------------
+// <h2>プロフィール</h2> と <p>React を勉強中です</p> の2つを返してください。
+// 余計な <div> を作らず、フラグメント <></> で1つにまとめること。
+function Exercise4() {
+  // ここに JSX を書いてください（<> ... </> で包む）
+  return <><h2>プロフィール</h2><p>React を勉強中です</p></>;
+  // 期待: 「プロフィール」(h2) と「React を勉強中です」(p)
+}
+
+
+// --- 演習5（ちょいむず）: && による条件表示 -------------------------
+// unread が 1 以上のときだけ <p>未読 ◯ 件</p> を表示してください（&& を使う）。
+// 全体は <div> で包み、中に <h2>受信箱</h2> も入れること。
+// ヒント: {unread > 0 && <p>未読 {unread} 件</p>}
+function Exercise5() {
+  const unread = 5;
+
+  // ここに JSX を書いてください
+  return<div>
+     <h2>受信箱</h2>{unread>0 && <p>未読 {unread} 件</p>}</div>;
+  // 期待: 「受信箱」と「未読 5 件」が表示される
+}
+
+
+// --- 演習6（むず・総合）: プロフィールカード -----------------------
+// user を使って、次の構造のカードを作ってください。
+//   - 一番外側は <div className="profile-card"> で包む
+//   - <img src={user.avatar} alt={user.name} /> （変数を { } で渡す）
+//   - <h2>{user.name}</h2>
+//   - <p>{user.role}</p>
+//   - 状態表示: isOnline が true なら「● オンライン」、false なら「○ オフライン」（三項演算子）
+//   - <ul> の中に user.tags を map して <li>（key 付き）で並べる
+function Exercise6() {
+  const user = {
+    name: "山田 花子",
+    role: "フロントエンドエンジニア",
+    avatar: "https://i.pravatar.cc/80",
+    isOnline: true,
+    tags: ["React", "TypeScript", "CSS"],
+  };
+
+  // ここに JSX を書いてください
+  return <div className = "profile-card">
+    <img src = {user.avatar} alt={user.name}/>
+    <h2>{user.name}</h2>
+    <p>{user.role}</p>
+    <p>{user.isOnline ? "● オンライン":"○ オフライン"}</p>
+    <ul>{user.tags.map((tag) => <li key= {tag}>{tag}</li>)}</ul>
+    </div>;
+  // 期待: カード内に 名前 / 職種 / 「● オンライン」 / タグ3つ が表示される
+}
+
+
+// =====================================================================
+//  採点ハーネス（ここから下は編集しません）
+// =====================================================================
+const norm = (s) => (s || "").replace(/\s+/g, " ").trim();
+
+function evaluate(Comp) {
+  // 画面外の箱にコンポーネントを描画し、その結果(HTML/テキスト)を取り出して採点する。
+  // flushSync で「同期的に」描画を完了させてから innerHTML を読むのがポイント。
+  const container = document.createElement("div");
+  try {
+    const root = ReactDOM.createRoot(container);
+    ReactDOM.flushSync(() => {
+      root.render(React.createElement(Comp));
+    });
+    const result = { ok: true, html: container.innerHTML, text: norm(container.textContent) };
+    root.unmount();
+    return result;
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+}
+
+const TASKS = [
+  {
+    n: 1, title: "演習1: className と自己閉じタグ",
+    desc: "class=\"thumb\" の img（alt 付き）",
+    Comp: Exercise1,
+    check: (html) =>
+      /<img/.test(html) &&
+      /class="[^"]*\bthumb\b[^"]*"/.test(html) &&
+      /alt="子猫"/.test(html),
+  },
+  {
+    n: 2, title: "演習2: 属性に変数を { } で渡す",
+    desc: "href が公式サイト・リンク文字あり",
+    Comp: Exercise2,
+    check: (html, text) =>
+      /href="https:\/\/react\.dev"?/.test(html) && text.includes("React 公式サイト"),
+  },
+  {
+    n: 3, title: "演習3: style は二重波括弧 {{ }}",
+    desc: "赤・24px で「重要なお知らせ」",
+    Comp: Exercise3,
+    check: (html, text) =>
+      text.includes("重要なお知らせ") &&
+      /color:\s*red/i.test(html) &&
+      /font-size:\s*24px/i.test(html),
+  },
+  {
+    n: 4, title: "演習4: フラグメント <></>",
+    desc: "h2 と p を余計な div なしで",
+    Comp: Exercise4,
+    check: (html, text) =>
+      text.includes("プロフィール") && text.includes("React を勉強中です") &&
+      /<h2/.test(html) && /<p/.test(html),
+  },
+  {
+    n: 5, title: "演習5: && による条件表示",
+    desc: "受信箱 + 未読 5 件",
+    Comp: Exercise5,
+    check: (html, text) =>
+      text.includes("受信箱") && text.includes("未読") && text.includes("5"),
+  },
+  {
+    n: 6, title: "演習6: プロフィールカード（総合）",
+    desc: "カード/画像/名前/職種/オンライン/タグ3つ",
+    Comp: Exercise6,
+    check: (html, text) => {
+      const liCount = (html.match(/<li/g) || []).length;
+      return /class="[^"]*profile-card[^"]*"/.test(html) &&
+        /<img/.test(html) &&
+        text.includes("山田 花子") &&
+        text.includes("フロントエンドエンジニア") &&
+        text.includes("オンライン") &&
+        liCount === 3 &&
+        ["React", "TypeScript", "CSS"].every((t) => text.includes(t));
+    },
+  },
+];
+
+function badge(kind, label) {
+  return `<span class="status ${kind}">${label}</span>`;
+}
+
+function run() {
+  const root = document.getElementById("results");
+  let html = "";
+  for (const t of TASKS) {
+    const r = evaluate(t.Comp);
+    let status, previewHtml = "", note = "";
+
+    if (!r.ok) {
+      status = badge("fail", "エラー");
+      note = `<pre>${r.error}</pre>`;
+    } else if (r.html.trim() === "") {
+      status = badge("todo", "未回答");
+    } else if (t.check(r.html, r.text)) {
+      status = badge("pass", "✅ 合格");
+      previewHtml = r.html;
+    } else {
+      status = badge("fail", "❌ もう少し");
+      previewHtml = r.html;
+      note = `<div class="hint">いまの表示テキスト: 「${r.text}」</div>`;
+    }
+
+    const preview = previewHtml
+      ? `<div class="preview"><div class="preview-label">▼ 実際の表示プレビュー</div>${previewHtml}</div>`
+      : "";
+
+    html += `
+      <div class="card">
+        <h2>${t.title} ${status}</h2>
+        <div class="desc">目標: ${t.desc}</div>
+        ${preview}
+        ${note}
+      </div>`;
+  }
+  root.innerHTML = html;
+}
+
+run();
+</script>
+</body>
+</html>
