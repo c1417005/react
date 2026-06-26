@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 08 — 演習: イベント処理と state（useState）</title>
+
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --paper:#f6efe2; --ink:#1d1a2b; --ink-soft:#4a4660;
+    --ember:#f04e2c; --ember-d:#c93a1c; --teal:#0e7c6b; --gold:#e8a200; --line:#e0d4bf; --card:#fffdf8;
+  }
+  * { box-sizing:border-box; }
+  body { font-family:"Zen Kaku Gothic New", system-ui, "Meiryo", sans-serif; line-height:1.85;
+    color:var(--ink); max-width:900px; margin:0 auto; padding:0 20px 90px;
+    background:
+      radial-gradient(900px 400px at 90% -5%, rgba(240,78,44,.06), transparent 60%),
+      var(--paper); }
+  .hero { margin:0 -20px 6px; padding:40px 26px 34px; color:#fdf6ea; border-radius:0 0 26px 26px;
+    background:
+      radial-gradient(500px 240px at 12% 0%, rgba(240,78,44,.5), transparent 60%),
+      linear-gradient(135deg,#211b33,#0f1f1d);
+    box-shadow:0 14px 36px rgba(27,24,48,.25); }
+  .hero .kicker { font-family:"JetBrains Mono",monospace; font-size:.72rem; letter-spacing:.2em;
+    color:#ffd9a8; text-transform:uppercase; }
+  .hero h1 { font-family:"Bricolage Grotesque","Zen Kaku Gothic New",sans-serif; font-weight:800;
+    margin:8px 0 6px; font-size:1.9rem; line-height:1.2; }
+  .hero h1 .pop { color:var(--ember); }
+  .hero p { margin:6px 0 0; color:#e7ddcf; }
+
+  .lead { background:#fef7e6; border-left:5px solid var(--gold); padding:12px 18px;
+    border-radius:0 10px 10px 0; margin:18px 0; }
+  .lead code { background:#efe2cf; }
+
+  h1 a, a { color:var(--ember-d); }
+  code { font-family:"JetBrains Mono",monospace; font-size:.86em; background:#efe2cf;
+    color:var(--ember-d); padding:2px 6px; border-radius:5px; }
+
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:16px 20px; margin:18px 0; box-shadow:0 6px 18px rgba(29,26,43,.05); }
+  .card h2 { margin:0 0 6px; font-size:1.12em; font-family:"Zen Kaku Gothic New",sans-serif;
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .status { font-weight:700; padding:3px 12px; border-radius:999px; font-size:.78em;
+    font-family:"JetBrains Mono",monospace; letter-spacing:.03em; }
+  .pass { background:#e3f6ec; color:#0b6b4f; border:1px solid #6bbf9a; }
+  .fail { background:#fdecec; color:#c93a1c; border:1px solid #e39b8a; }
+  .todo { background:#efe7d6; color:#6b6450; border:1px solid #cfc3aa; }
+  .desc { color:var(--ink-soft); font-size:.92em; }
+  .preview { border:1px dashed #c9bea6; border-radius:10px; padding:12px 16px; margin-top:12px;
+    background:#fffdf6; }
+  .preview-label { font-size:.74em; color:#9a8f76; margin-bottom:6px;
+    font-family:"JetBrains Mono",monospace; letter-spacing:.05em; }
+  .warning { border:1px solid var(--ember); border-radius:10px; padding:8px 14px; background:#fdeee8; color:var(--ember-d); }
+  pre { background:#1b1830; color:#f0bfae; padding:12px 14px; border-radius:10px; overflow-x:auto;
+    font-size:.82em; font-family:"JetBrains Mono",monospace; }
+  .hint { font-size:.86em; color:var(--ink-soft); margin-top:6px; }
+  #results { margin-top:6px; }
+
+  /* 演習内のボタン・input スタイル */
+  .preview button {
+    font-family:"Zen Kaku Gothic New",sans-serif; font-size:.9rem;
+    background:var(--ember); color:#fff; border:none; border-radius:8px;
+    padding:6px 16px; cursor:pointer; margin:3px 5px 3px 0;
+  }
+  .preview input {
+    font-family:"Zen Kaku Gothic New",sans-serif; font-size:.9rem;
+    border:1.5px solid var(--line); border-radius:8px; padding:5px 10px;
+    background:var(--paper); color:var(--ink);
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="kicker">◆ Day 08 — 演習</div>
+  <h1>イベントと<span class="pop">useState</span>を書いてみよう</h1>
+  <p>onClick・onChange・useState を実際に手で書く練習。書いて保存したら、下に合否が自動で出ます。</p>
+</div>
+
+<div class="lead">
+  <strong>進め方:</strong> このファイル <code>Day08/exercise.html</code> をエディタで開き、各課題の
+  空欄を自分のコードに置き換えて <strong>保存 → ブラウザで再読み込み</strong>してください。
+  下に各課題の合否（✅/❌）と表示プレビューが出ます。未回答は「未回答」と表示されます。<br>
+  解説は <code>Day08/lesson.html</code>。模範解答は出しません。書けたらコードを貼ってレビューに出してください。
+</div>
+
+<div id="results"></div>
+
+<!-- ===================================================================
+     ここから下が「あなたが編集する場所」です。
+==================================================================== -->
+<script type="text/babel" data-presets="react">
+const { useState } = React;
+
+// =====================================================================
+//  演習（ここを編集します）
+// =====================================================================
+
+// --- 演習1（やさしい）: クリックカウンター ----------------------------
+// カウンターコンポーネントを完成させてください。
+// ・useState で count を管理する（初期値は 0）。
+// ・「増やす」ボタンをクリックするたびに count が 1 増える。
+// ・count の値を画面に表示する（<p> でも <span> でも何でも OK）。
+// ・ヒント: const [count, setCount] = useState(0);
+function Exercise1() {
+  // ここにコードを書いてください
+  return <span data-unanswered="true"></span>;
+}
+
+
+// --- 演習2（やさしい）: オン/オフトグル ------------------------------
+// トグルコンポーネントを完成させてください。
+// ・useState で isOn（真偽値）を管理する（初期値は false）。
+// ・ボタンをクリックするたびに isOn が true/false と切り替わる。
+// ・isOn が true なら「オン」、false なら「オフ」と表示する。
+// ・ヒント: setIsOn(!isOn) でトグルできます。
+function Exercise2() {
+  // ここにコードを書いてください
+  return <span data-unanswered="true"></span>;
+}
+
+
+// --- 演習3（ふつう）: テキスト入力のリアルタイム表示 -----------------
+// テキスト入力コンポーネントを完成させてください。
+// ・useState で text を管理する（初期値は ""）。
+// ・<input> に onChange を設定し、入力値で text を更新する。
+// ・<input> には value={text} を必ず設定すること（制御されたコンポーネント）。
+// ・text が空でなければ <p>入力中: {text}</p> を表示する。
+//   text が空のときは何も表示しない（または空にする）。
+// ・ヒント: e.target.value で入力値が取れます。
+function Exercise3() {
+  // ここにコードを書いてください
+  return <span data-unanswered="true"></span>;
+}
+
+
+// --- 演習4（ふつう）: +1 / −1 / リセットのカウンター ----------------
+// 3種類のボタンを持つカウンターを完成させてください。
+// ・useState で count を管理する（初期値は 0）。
+// ・「＋１」ボタン: count を 1 増やす。
+// ・「−１」ボタン: count を 1 減らす。
+// ・「リセット」ボタン: count を 0 に戻す。
+// ・count の値を画面に表示する。
+function Exercise4() {
+  // ここにコードを書いてください
+  return <span data-unanswered="true"></span>;
+}
+
+
+// --- 演習5（ちょいむず）: テキスト入力してリストに追加 ----------------
+// リスト追加コンポーネントを完成させてください。
+// ・useState でテキスト入力用の state（初期値 ""）と
+//   アイテム一覧用の配列の state（初期値 []）を別々に作る。
+// ・テキストボックスに入力 → 「追加」ボタンをクリックすると、
+//   その文字列が配列に追加される。
+// ・追加後は入力欄を空にする（state を "" にリセット）。
+// ・配列の中身を <ul><li key={i}> の形でリスト表示する。
+// ・ヒント: setItems([...items, text]) で配列に追加できます。
+function Exercise5() {
+  // ここにコードを書いてください
+  return <span data-unanswered="true"></span>;
+}
+
+
+// --- 演習6（むず・総合）: 買い物リスト --------------------------------
+// 以下の機能を持つ買い物リストを完成させてください。
+//
+// ① テキスト入力と「追加」ボタン
+//    ・入力欄に商品名を入力 → 「追加」クリックでリストに追加
+//    ・追加後は入力欄を空にする
+//    ・空文字のまま「追加」してもリストに加えないこと（if で弾く）
+//
+// ② 商品リストの表示
+//    ・各アイテムを <li> で表示（key は追加時に決めた id や index でOK）
+//    ・各 <li> に「削除」ボタンを付ける
+//    ・「削除」クリックでそのアイテムをリストから取り除く
+//    ・ヒント: setItems(items.filter((item) => item.id !== id))
+//
+// ③ 残り件数の表示
+//    ・リストの下に <p>残り {items.length} 件</p> を表示する
+//    ・0件のときは <p>リストは空です</p> を表示する
+//
+// ヒント: 各アイテムは { id: Date.now(), name: text } のようなオブジェクトにすると
+//        削除が簡単になります。
+function Exercise6() {
+  // ここにコードを書いてください
+  return <span data-unanswered="true"></span>;
+}
+
+
+// =====================================================================
+//  採点ハーネス（ここから下は編集しません）
+// =====================================================================
+const norm = (s) => (s || "").replace(/\s+/g, " ").trim();
+
+function evaluate(Comp, interact) {
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  try {
+    const root = ReactDOM.createRoot(container);
+    ReactDOM.flushSync(() => root.render(React.createElement(Comp)));
+    const initial = { html: container.innerHTML, text: norm(container.textContent) };
+    let after = { ...initial };
+    if (interact) {
+      try { interact(container); }
+      catch (_) {}
+      after = { html: container.innerHTML, text: norm(container.textContent) };
+    }
+    root.unmount();
+    document.body.removeChild(container);
+    return { ok: true, initial, after };
+  } catch (e) {
+    try { document.body.removeChild(container); } catch (_) {}
+    return { ok: false, error: e.message };
+  }
+}
+
+// input の値を React のイベントシステムを通じてセットするユーティリティ
+function setInputValue(inp, value) {
+  const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+  nativeSetter.call(inp, value);
+  ReactDOM.flushSync(() => inp.dispatchEvent(new Event("input", { bubbles: true })));
+}
+
+const TASKS = [
+  {
+    n: 1,
+    title: "演習1: クリックカウンター",
+    desc: "初期表示は 0、ボタンをクリックすると 1 になる",
+    Comp: Exercise1,
+    interact: (c) => {
+      ReactDOM.flushSync(() => c.querySelector("button").click());
+    },
+    check: (r) => {
+      if (r.initial.html.includes('data-unanswered')) return null; // 未回答
+      return r.initial.text.includes("0") && r.after.text.includes("1");
+    },
+  },
+  {
+    n: 2,
+    title: "演習2: オン/オフトグル",
+    desc: "初期表示「オフ」→ クリックで「オン」に切り替わる",
+    Comp: Exercise2,
+    interact: (c) => {
+      ReactDOM.flushSync(() => c.querySelector("button").click());
+    },
+    check: (r) => {
+      if (r.initial.html.includes('data-unanswered')) return null;
+      return r.initial.text.includes("オフ") && r.after.text.includes("オン");
+    },
+  },
+  {
+    n: 3,
+    title: "演習3: テキスト入力のリアルタイム表示",
+    desc: "<input> があり、入力内容が「入力中: ...」として表示される",
+    Comp: Exercise3,
+    interact: (c) => {
+      const inp = c.querySelector("input");
+      if (inp) setInputValue(inp, "テスト");
+    },
+    check: (r) => {
+      if (r.initial.html.includes('data-unanswered')) return null;
+      return r.initial.html.includes("<input") && r.after.text.includes("テスト");
+    },
+  },
+  {
+    n: 4,
+    title: "演習4: ＋１ / −１ / リセット",
+    desc: "＋１を 3 回クリックすると 3 が表示される",
+    Comp: Exercise4,
+    interact: (c) => {
+      const plusBtn = [...c.querySelectorAll("button")].find(
+        (b) => b.textContent.includes("+") || b.textContent.includes("＋") || b.textContent.includes("増")
+      );
+      if (plusBtn) {
+        ReactDOM.flushSync(() => plusBtn.click());
+        ReactDOM.flushSync(() => plusBtn.click());
+        ReactDOM.flushSync(() => plusBtn.click());
+      }
+    },
+    check: (r) => {
+      if (r.initial.html.includes('data-unanswered')) return null;
+      return r.initial.text.includes("0") && r.after.text.includes("3");
+    },
+  },
+  {
+    n: 5,
+    title: "演習5: テキスト入力してリストに追加",
+    desc: "テキストを入力して追加ボタンをクリックすると <li> が増える",
+    Comp: Exercise5,
+    interact: (c) => {
+      const inp = c.querySelector("input");
+      if (inp) setInputValue(inp, "りんご");
+      const addBtn = [...c.querySelectorAll("button")].find(
+        (b) => b.textContent.includes("追加") || b.textContent.includes("Add")
+      );
+      if (addBtn) ReactDOM.flushSync(() => addBtn.click());
+    },
+    check: (r) => {
+      if (r.initial.html.includes('data-unanswered')) return null;
+      return r.initial.html.includes("<input") &&
+             (r.after.html.includes("<li") || r.after.text.includes("りんご"));
+    },
+  },
+  {
+    n: 6,
+    title: "演習6: 買い物リスト（総合）",
+    desc: "追加・削除ができ、残り件数または「リストは空です」が表示される",
+    Comp: Exercise6,
+    interact: (c) => {
+      const inp = c.querySelector("input");
+      if (inp) setInputValue(inp, "牛乳");
+      const addBtn = [...c.querySelectorAll("button")].find(
+        (b) => b.textContent.includes("追加") || b.textContent.includes("Add")
+      );
+      if (addBtn) ReactDOM.flushSync(() => addBtn.click());
+    },
+    check: (r) => {
+      if (r.initial.html.includes('data-unanswered')) return null;
+      const hasInput   = r.initial.html.includes("<input");
+      const hasEmpty   = r.initial.text.includes("空") || r.initial.text.includes("0 件") || r.initial.text.includes("0件");
+      const hasAdded   = r.after.html.includes("<li") || r.after.text.includes("牛乳");
+      const hasCount   = r.after.text.includes("残り") || r.after.text.includes("件");
+      return hasInput && (hasEmpty || r.initial.html.includes("<ul")) && hasAdded && hasCount;
+    },
+  },
+];
+
+function badge(kind, label) {
+  return `<span class="status ${kind}">${label}</span>`;
+}
+
+function run() {
+  const root = document.getElementById("results");
+  let html = "";
+  for (const t of TASKS) {
+    const r = evaluate(t.Comp, t.interact);
+    let status, previewHtml = "", note = "";
+
+    if (!r.ok) {
+      status = badge("fail", "エラー");
+      note = `<pre>${r.error}</pre>`;
+    } else if (r.initial.html.includes('data-unanswered="true"')) {
+      status = badge("todo", "未回答");
+    } else {
+      const result = t.check(r);
+      if (result === null) {
+        status = badge("todo", "未回答");
+      } else if (result) {
+        status = badge("pass", "✅ 合格");
+        previewHtml = r.after.html || r.initial.html || "<em>(表示なし)</em>";
+      } else {
+        status = badge("fail", "❌ もう少し");
+        previewHtml = r.after.html || r.initial.html || "<em>(表示なし)</em>";
+        note = `<div class="hint">初期表示テキスト: 「${r.initial.text}」<br>操作後テキスト: 「${r.after.text}」</div>`;
+      }
+    }
+
+    const preview = previewHtml
+      ? `<div class="preview"><div class="preview-label">▼ 実際の表示プレビュー（操作後）</div>${previewHtml}</div>`
+      : "";
+
+    html += `
+      <div class="card">
+        <h2>${t.title} ${status}</h2>
+        <div class="desc">目標: ${t.desc}</div>
+        ${preview}
+        ${note}
+      </div>`;
+  }
+  root.innerHTML = html;
+}
+
+run();
+</script>
+</body>
+</html>

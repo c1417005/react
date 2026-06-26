@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 08 — イベント処理と state（useState）</title>
+
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --paper:   #f6efe2;
+    --paper-2: #efe5d3;
+    --ink:     #1d1a2b;
+    --ink-soft:#4a4660;
+    --ember:   #f04e2c;
+    --ember-d: #c93a1c;
+    --teal:    #0e7c6b;
+    --gold:    #e8a200;
+    --line:    #e0d4bf;
+    --card:    #fffdf8;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: "Zen Kaku Gothic New", system-ui, "Hiragino Sans", "Meiryo", sans-serif;
+    line-height: 1.95; color: var(--ink);
+    margin: 0; padding: 0 0 100px;
+    background:
+      radial-gradient(1200px 500px at 80% -10%, rgba(240,78,44,.07), transparent 60%),
+      radial-gradient(900px 500px at -10% 20%, rgba(14,124,107,.06), transparent 55%),
+      var(--paper);
+    background-attachment: fixed;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 0 22px; }
+
+  /* ===== ヒーロー ===== */
+  .hero {
+    position: relative; overflow: hidden; color: #fdf6ea;
+    background:
+      radial-gradient(600px 300px at 15% 10%, rgba(240,78,44,.55), transparent 60%),
+      radial-gradient(700px 360px at 90% 80%, rgba(14,124,107,.45), transparent 60%),
+      linear-gradient(135deg, #211b33 0%, #161226 55%, #0f1f1d 100%);
+    padding: 70px 22px 78px;
+  }
+  .hero::after {
+    content:""; position:absolute; inset:0; opacity:.5; pointer-events:none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.05'/%3E%3C/svg%3E");
+  }
+  .hero-inner { max-width: 880px; margin: 0 auto; position: relative; z-index: 1; }
+  .kicker {
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:"JetBrains Mono", monospace; font-size:.74rem; letter-spacing:.22em;
+    text-transform:uppercase; color:#ffd9a8;
+    border:1px solid rgba(255,217,168,.35); border-radius:999px; padding:6px 14px;
+    background:rgba(255,217,168,.08);
+    animation: rise .7s .05s both;
+  }
+  .hero h1 {
+    font-family:"Bricolage Grotesque", "Zen Kaku Gothic New", sans-serif;
+    font-weight:800; font-size: clamp(2.1rem, 6vw, 3.4rem); line-height:1.08;
+    margin:18px 0 14px; letter-spacing:-.01em;
+    animation: rise .7s .15s both;
+  }
+  .hero h1 .pop { color: var(--ember); text-shadow: 0 0 30px rgba(240,78,44,.45); }
+  .hero .lead { max-width: 620px; color:#e7ddcf; font-size:1.06rem; animation: rise .7s .27s both; }
+  .hero .meta { margin-top:26px; display:flex; flex-wrap:wrap; gap:10px; animation: rise .7s .4s both; }
+  .chip { font-family:"JetBrains Mono", monospace; font-size:.78rem;
+    background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.16);
+    color:#f3ead9; padding:6px 12px; border-radius:8px; }
+  .chip b { color: var(--gold); }
+
+  /* ヒーローのサイクル図 */
+  .cycle { margin-top:36px; display:flex; align-items:center; gap:0;
+    flex-wrap:wrap; animation: rise .8s .5s both; }
+  .cycle-node { border-radius:14px; padding:12px 16px; text-align:center; min-width:120px;
+    border:1px solid rgba(255,255,255,.18); backdrop-filter:blur(2px); }
+  .cycle-node.ev  { background:linear-gradient(135deg,rgba(232,162,0,.25),rgba(232,162,0,.06)); }
+  .cycle-node.fn  { background:linear-gradient(135deg,rgba(14,124,107,.25),rgba(14,124,107,.06)); }
+  .cycle-node.st  { background:linear-gradient(135deg,rgba(240,78,44,.3),rgba(240,78,44,.06)); }
+  .cycle-node.ui  { background:linear-gradient(135deg,rgba(127,214,255,.2),rgba(127,214,255,.04)); }
+  .cycle-node .role { font-family:"JetBrains Mono",monospace; font-size:.64rem; letter-spacing:.14em;
+    text-transform:uppercase; opacity:.65; }
+  .cycle-node .name { font-family:"Bricolage Grotesque",sans-serif; font-weight:700;
+    font-size:1.05rem; margin-top:2px; }
+  .cycle-arrow { padding:0 8px; color:#ffd9a8; font-size:1.2rem;
+    animation: pulse 1.8s ease-in-out infinite; }
+  .cycle-arrow:nth-child(4) { animation-delay:.45s; }
+  .cycle-arrow:nth-child(6) { animation-delay:.9s; }
+  .cycle-arrow:nth-child(8) { animation-delay:1.35s; }
+
+  @keyframes pulse { 0%,100%{ opacity:.4; } 50%{ opacity:1; } }
+  @keyframes rise { from{ opacity:0; transform:translateY(16px);} to{ opacity:1; transform:none;} }
+
+  /* ===== 進捗バー ===== */
+  .progress { margin:30px 0 6px; }
+  .progress .label { display:flex; justify-content:space-between;
+    font-family:"JetBrains Mono",monospace; font-size:.74rem; color:var(--ink-soft);
+    letter-spacing:.08em; margin-bottom:7px; }
+  .bar { height:11px; border-radius:999px; background:var(--paper-2);
+    border:1px solid var(--line); overflow:hidden; }
+  .bar > span { display:block; height:100%; width:57%;
+    background:linear-gradient(90deg, var(--ember), var(--gold));
+    border-radius:999px; box-shadow:0 0 12px rgba(240,78,44,.5); }
+
+  /* ===== 見出し ===== */
+  h2 {
+    font-family:"Bricolage Grotesque","Zen Kaku Gothic New",sans-serif; font-weight:700;
+    font-size:1.5rem; margin:58px 0 6px; padding-bottom:10px; scroll-margin-top:14px;
+    border-bottom:2px solid var(--line); position:relative;
+  }
+  h2 .num { font-family:"JetBrains Mono",monospace; color:var(--ember);
+    font-size:1rem; margin-right:12px; vertical-align:2px; }
+  h3 { font-family:"Zen Kaku Gothic New",sans-serif; font-weight:700; color:var(--teal);
+    font-size:1.12rem; margin:28px 0 4px; }
+  h3::before { content:"◆"; color:var(--ember); font-size:.7em; margin-right:8px; vertical-align:2px; }
+  p { margin:12px 0; }
+
+  /* ===== コード ===== */
+  code { font-family:"JetBrains Mono",monospace; font-size:.86em;
+    background:#efe2cf; color:var(--ember-d); padding:2px 6px; border-radius:5px; }
+  pre {
+    background:#1b1830; color:#e9e3d4; border-radius:14px; padding:20px 20px 18px;
+    overflow-x:auto; line-height:1.7; font-size:.86rem; position:relative;
+    border:1px solid #2c2745; box-shadow:0 16px 34px rgba(27,24,48,.22);
+    margin:18px 0;
+  }
+  pre::before { content:"JSX"; position:absolute; top:9px; right:14px;
+    font-family:"JetBrains Mono",monospace; font-size:.65rem; letter-spacing:.18em; color:#6a6390; }
+  pre.js::before { content:"JS"; }
+  pre code { background:none; color:inherit; padding:0; font-size:.92em; }
+  .c-key { color:#ff9d7a; }
+  .c-com { color:#7d769c; font-style:italic; }
+  .c-str { color:#9fe3b0; }
+  .c-tag { color:#7fd6ff; }
+  .c-fn  { color:#c9b8ff; }
+  .c-num { color:#f0c37a; }
+
+  /* ===== 注記ボックス ===== */
+  .box { border-radius:0 12px 12px 0; padding:14px 18px; margin:18px 0;
+    background:var(--card); border-left:5px solid var(--line); }
+  .note { border-left-color:var(--gold);  background:#fef7e6; }
+  .why  { border-left-color:var(--teal);  background:#e9f6f2; }
+  .warn { border-left-color:var(--ember); background:#fdeee8; }
+  .box strong { color:var(--ink); }
+
+  /* 励まし */
+  .cheer { margin:24px 0; padding:18px 22px; border-radius:16px; font-weight:700;
+    color:#5a2415; background:linear-gradient(135deg,#ffe9c9,#ffd9c2);
+    border:1px solid #f3c39e; box-shadow:0 8px 22px rgba(240,78,44,.12); }
+  .cheer .big { font-family:"Bricolage Grotesque",sans-serif; font-size:1.1rem; }
+
+  /* 目次 */
+  .toc { background:var(--card); border:1px solid var(--line); border-radius:18px;
+    padding:20px 26px; box-shadow:0 10px 28px rgba(29,26,43,.06); margin:26px 0; }
+  .toc strong { font-family:"Bricolage Grotesque",sans-serif; font-size:1.05rem; color:var(--ember-d); }
+  .toc ol { margin:12px 0 2px; padding-left:20px; }
+  .toc li { margin:5px 0; }
+  .toc a { color:var(--ink); text-decoration:none; border-bottom:1px solid transparent; }
+  .toc a:hover { color:var(--ember-d); border-bottom-color:var(--ember); }
+
+  /* テーブル */
+  table { border-collapse:collapse; width:100%; margin:18px 0; background:var(--card);
+    border-radius:12px; overflow:hidden; box-shadow:0 6px 18px rgba(29,26,43,.06); font-size:.95rem; }
+  th,td { border:1px solid var(--line); padding:10px 14px; text-align:left; vertical-align:top; }
+  th { background:linear-gradient(135deg,var(--ink),#2e2a47); color:#f6efe2; border-color:rgba(255,255,255,.15);
+    font-family:"Zen Kaku Gothic New",sans-serif; }
+  tr:nth-child(even) td { background:#faf4e9; }
+
+  /* 戻るリンク */
+  .back { text-align:right; margin:10px 0 0; }
+  .back a { font-family:"JetBrains Mono",monospace; font-size:.74rem; text-decoration:none;
+    color:var(--ink-soft); border:1px solid var(--line); border-radius:999px; padding:4px 14px;
+    background:var(--card); transition:.18s; }
+  .back a:hover { background:var(--ink); color:var(--paper); border-color:var(--ink); }
+  a { color:var(--ember-d); }
+
+  /* ライブデモ */
+  .demo { background:#fff8f0; border:1.5px solid #f3c39e; border-radius:14px;
+    padding:18px 20px; margin:22px 0; }
+  .demo-label { font-family:"JetBrains Mono",monospace; font-size:.7rem; letter-spacing:.15em;
+    text-transform:uppercase; color:#9a5530; margin-bottom:12px; }
+  .demo-inner { background:var(--card); border:1px solid var(--line); border-radius:10px;
+    padding:14px 18px; min-height:60px; }
+
+  /* デモ内ボタン */
+  .demo-inner button {
+    font-family:"Zen Kaku Gothic New",sans-serif; font-size:.9rem;
+    background:var(--ember); color:#fff; border:none; border-radius:8px;
+    padding:7px 18px; cursor:pointer; margin:4px 6px 4px 0; transition:.15s;
+  }
+  .demo-inner button:hover { background:var(--ember-d); }
+  .demo-inner button.sec { background:#e9f6f2; color:var(--teal); border:1px solid #9fd4c8; }
+  .demo-inner button.sec:hover { background:#d0ede8; }
+  .demo-inner input {
+    font-family:"Zen Kaku Gothic New",sans-serif; font-size:.95rem;
+    border:1.5px solid var(--line); border-radius:8px; padding:6px 12px;
+    background:var(--paper); color:var(--ink); outline:none; transition:.15s;
+  }
+  .demo-inner input:focus { border-color:var(--ember); }
+  .demo-inner p { margin:10px 0 0; font-size:.95rem; }
+  .demo-inner .count { font-family:"Bricolage Grotesque",sans-serif; font-weight:700;
+    font-size:2.2rem; color:var(--ember); line-height:1; }
+
+  /* NG/OK 比較 */
+  .compare { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:18px 0; }
+  .compare > div { border-radius:12px; overflow:hidden; }
+  .compare .cap { font-family:"JetBrains Mono",monospace; font-size:.7rem; letter-spacing:.1em;
+    padding:6px 14px; font-weight:700; }
+  .ng .cap { background:#fdecec; color:#c93a1c; }
+  .ok .cap { background:#e3f6ec; color:#0b6b4f; }
+  .compare pre { margin:0; border-radius:0; box-shadow:none; }
+  @media(max-width:580px){ .compare { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+
+<!-- ===== ヒーロー ===== -->
+<div class="hero">
+  <div class="hero-inner">
+    <div class="kicker">◆ Day 08 / 14</div>
+    <h1>イベントと<span class="pop">state</span>で<br>動く画面を作ろう</h1>
+    <p class="lead">ボタンをクリックしたら数字が増える、入力した文字がリアルタイムで表示される——そういう「動く React」の基礎が今日のテーマです。</p>
+
+    <!-- サイクル図: クリック → ハンドラー → setState → 再描画 → 画面 -->
+    <div class="cycle">
+      <div class="cycle-node ev">
+        <div class="role">Trigger</div>
+        <div class="name">クリック</div>
+      </div>
+      <div class="cycle-arrow">→</div>
+      <div class="cycle-node fn">
+        <div class="role">Handler</div>
+        <div class="name">関数が動く</div>
+      </div>
+      <div class="cycle-arrow">→</div>
+      <div class="cycle-node st">
+        <div class="role">setState</div>
+        <div class="name">state 更新</div>
+      </div>
+      <div class="cycle-arrow">→</div>
+      <div class="cycle-node ui">
+        <div class="role">Re-render</div>
+        <div class="name">画面が変わる</div>
+      </div>
+    </div>
+
+    <div class="meta">
+      <span class="chip">🎯 <b>イベントハンドラー</b></span>
+      <span class="chip">💾 <b>useState</b></span>
+      <span class="chip">🔄 <b>再レンダリング</b></span>
+      <span class="chip">📝 <b>フォーム入力</b></span>
+    </div>
+
+    <div class="progress">
+      <div class="label"><span>学習進捗</span><span>Day 08 / 14</span></div>
+      <div class="bar"><span></span></div>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+<!-- ===== 目次 ===== -->
+<div class="toc" id="toc">
+  <strong>📋 目次</strong>
+  <ol>
+    <li><a href="#s1">イベントハンドラーの書き方</a></li>
+    <li><a href="#s2">useState の基本 ― フックとは</a></li>
+    <li><a href="#s3">state が変わると何が起きるか（再レンダリング）</a></li>
+    <li><a href="#s4">テキスト入力を state で管理する</a></li>
+    <li><a href="#s5">複数の state を使う</a></li>
+    <li><a href="#s6">まとめ・よくある間違い</a></li>
+  </ol>
+</div>
+
+<!-- ===================================================================
+     Section 1: イベントハンドラー
+==================================================================== -->
+<section id="s1">
+<h2><span class="num">1</span>イベントハンドラーの書き方</h2>
+
+<p>「ユーザーが何かした瞬間に実行したい処理」を <strong>イベントハンドラー</strong> と呼びます。
+「クリックされた」「テキストを入力した」「フォームを送信した」などのタイミングで動く関数です。</p>
+
+<h3>onClick で「クリックを聞く」</h3>
+
+<p>React では、HTML タグに <code>onClick</code>（キャメルケース！）という props を渡すと、クリック時に指定した関数を呼んでくれます。</p>
+
+<pre><code><span class="c-key">function</span> <span class="c-fn">MyButton</span>() {
+  <span class="c-key">function</span> <span class="c-fn">handleClick</span>() {
+    console.log(<span class="c-str">'クリックされた！'</span>);
+  }
+
+  <span class="c-key">return</span> (
+    <span class="c-tag">&lt;button</span> <span class="c-key">onClick</span>={handleClick}<span class="c-tag">&gt;</span>
+      クリック
+    <span class="c-tag">&lt;/button&gt;</span>
+  );
+}</code></pre>
+
+<div class="box note">
+  <strong>命名の慣習:</strong> イベントハンドラーの関数名は <code>handle○○</code> と書くのが React の一般的な慣習です。
+  <code>handleClick</code>、<code>handleChange</code>、<code>handleSubmit</code> のように。
+</div>
+
+<h3 id="pass-vs-call">⚠️ 超重要：「関数を渡す」と「関数を呼ぶ」の違い</h3>
+
+<p>これは React 入門で一番ハマりやすいポイントです。<strong>関数は「渡す」のであって「呼ぶ」のではない</strong>ことを覚えてください。</p>
+
+<div class="compare">
+  <div class="ng">
+    <div class="cap">❌ 間違い — クリックしなくても即実行される</div>
+    <pre><code><span class="c-tag">&lt;button</span> <span class="c-key">onClick</span>={<span class="c-fn">handleClick</span>()}<span class="c-tag">&gt;</span></code></pre>
+  </div>
+  <div class="ok">
+    <div class="cap">✅ 正しい — クリック時だけ実行される</div>
+    <pre><code><span class="c-tag">&lt;button</span> <span class="c-key">onClick</span>={<span class="c-fn">handleClick</span>}<span class="c-tag">&gt;</span></code></pre>
+  </div>
+</div>
+
+<p>なぜそうなるかというと——</p>
+<ul>
+  <li><code>handleClick</code> → 「この関数のことを React に教える」（関数の参照を渡す）</li>
+  <li><code>handleClick()</code> → 「今すぐ関数を実行して、その戻り値を渡す」（JSX が評価された瞬間に実行される）</li>
+</ul>
+
+<p>つまり <code>onClick={handleClick()}</code> と書いてしまうと、ページを表示した瞬間に全部実行されてしまいます。</p>
+
+<h3>アロー関数でインラインに書く</h3>
+
+<p>短い処理なら、アロー関数を直接書くこともできます。</p>
+
+<pre><code><span class="c-tag">&lt;button</span> <span class="c-key">onClick</span>={() => console.log(<span class="c-str">'押した！'</span>)}<span class="c-tag">&gt;</span>
+  クリック
+<span class="c-tag">&lt;/button&gt;</span></code></pre>
+
+<p>アロー関数の場合は <code>() => ...</code> という形なので「関数を渡している」ことになります（ <code>()</code> をつけても即実行にはなりません）。</p>
+
+<div class="box why">
+  <strong>なぜインラインアロー関数は OK なのか？</strong><br>
+  <code>() => handleClick()</code> と書いた場合、これは「クリックされたときに <code>handleClick()</code> を呼ぶ、という新しい関数」です。
+  即実行はされません。複数の処理をまとめたいときや、引数を渡したいときに便利です。
+</div>
+
+<h3>onChange で「テキスト入力を聞く」</h3>
+
+<p>テキストボックスに入力されるたびに動かしたいときは <code>onChange</code> を使います。
+イベントハンドラーは <strong>イベントオブジェクト</strong>（慣習として <code>e</code> や <code>event</code> という名前）を自動で受け取れます。
+<code>e.target.value</code> で、今入力されているテキストを取得できます。</p>
+
+<pre><code><span class="c-key">function</span> <span class="c-fn">MyInput</span>() {
+  <span class="c-key">function</span> <span class="c-fn">handleChange</span>(e) {
+    <span class="c-com">// e.target は入力欄の DOM 要素</span>
+    <span class="c-com">// e.target.value は今入力されている文字列</span>
+    console.log(e.target.value);
+  }
+
+  <span class="c-key">return</span> <span class="c-tag">&lt;input</span> <span class="c-key">onChange</span>={handleChange} <span class="c-tag">/&gt;</span>;
+}</code></pre>
+
+<!-- ライブデモ 1 -->
+<div class="demo">
+  <div class="demo-label">▶ ライブデモ — イベントオブジェクトを確認する</div>
+  <div class="demo-inner" id="demo1"></div>
+</div>
+
+<div class="box note">
+  <strong>主なイベント属性一覧:</strong>
+  <code>onClick</code>（クリック）、
+  <code>onChange</code>（入力値の変化）、
+  <code>onSubmit</code>（フォーム送信）、
+  <code>onMouseEnter</code> / <code>onMouseLeave</code>（ホバー）。
+  HTML の <code>onclick</code> と違い、React は <strong>キャメルケース</strong> です。
+</div>
+
+<div class="back"><a href="#toc">目次に戻る ↑</a></div>
+</section>
+
+
+<!-- ===================================================================
+     Section 2: useState の基本
+==================================================================== -->
+<section id="s2">
+<h2><span class="num">2</span>useState の基本 ― フックとは</h2>
+
+<h3>フック（Hook）とは</h3>
+
+<p>React には <strong>フック（Hook）</strong> と呼ばれる特別な関数群があります。<code>use</code> で始まる名前が特徴です。
+フックは「React の機能をコンポーネントの中で使うためのスイッチ」のようなものです。</p>
+
+<p>今日学ぶ <code>useState</code> もフックの1つで、コンポーネントに「状態（state）を覚えさせる」機能を追加します。</p>
+
+<div class="box warn">
+  <strong>フックのルール（重要）:</strong>
+  <ul style="margin:6px 0">
+    <li>フックは必ず <strong>コンポーネント関数の最上位</strong> で呼ぶ</li>
+    <li><code>if</code> 文、<code>for</code> 文、入れ子の関数の中では呼べない</li>
+    <li>フックを呼べるのは React のコンポーネント（または後で学ぶカスタムフック）の中だけ</li>
+  </ul>
+</div>
+
+<h3>「普通の変数」ではダメな理由</h3>
+
+<p>まず「なぜ普通の変数ではいけないのか」を理解しましょう。</p>
+
+<pre><code><span class="c-com">// ❌ これは動かない</span>
+<span class="c-key">function</span> <span class="c-fn">Counter</span>() {
+  <span class="c-key">let</span> count = <span class="c-num">0</span>;  <span class="c-com">// ← ただの変数</span>
+
+  <span class="c-key">return</span> (
+    <span class="c-tag">&lt;div&gt;</span>
+      <span class="c-tag">&lt;p&gt;</span>カウント: {count}<span class="c-tag">&lt;/p&gt;</span>
+      <span class="c-tag">&lt;button</span> <span class="c-key">onClick</span>={() => { count = count + <span class="c-num">1</span>; }}<span class="c-tag">&gt;</span>増やす<span class="c-tag">&lt;/button&gt;</span>
+    <span class="c-tag">&lt;/div&gt;</span>
+  );
+}</code></pre>
+
+<p>変数を書き換えても、React は「何かが変わった！画面を更新しよう」とは気づいてくれません。
+React が画面を更新（再レンダリング）するには、React が知っている仕組みを使う必要があります。
+それが <code>useState</code> です。</p>
+
+<h3>useState の構文</h3>
+
+<pre><code><span class="c-key">const</span> [count, setCount] = <span class="c-fn">useState</span>(<span class="c-num">0</span>);
+<span class="c-com">//     ↑今の値  ↑更新関数     ↑初期値（最初の1回だけ使われる）</span></code></pre>
+
+<p>3点を押さえましょう：</p>
+<ul>
+  <li><code>useState(0)</code> ：<strong>初期値</strong> を渡す。数値・文字列・真偽値・配列・オブジェクトなんでも OK。</li>
+  <li><code>count</code>（1つ目） ：現在の state の値。これを JSX の中で表示に使う。</li>
+  <li><code>setCount</code>（2つ目） ：state を更新するための関数。これを呼ぶと画面が更新される。</li>
+</ul>
+
+<div class="box note">
+  <strong>分割代入の復習（Day02）:</strong>
+  <code>useState</code> は内部的に <code>[値, 関数]</code> という配列を返しています。
+  <code>const [count, setCount] = ...</code> は配列の分割代入で、1番目を <code>count</code>、2番目を <code>setCount</code> という名前に取り出しているだけです。
+</div>
+
+<h3>カウンターの完全なコード</h3>
+
+<pre><code><span class="c-key">function</span> <span class="c-fn">Counter</span>() {
+  <span class="c-key">const</span> [count, setCount] = <span class="c-fn">useState</span>(<span class="c-num">0</span>);  <span class="c-com">// ← 初期値 0</span>
+
+  <span class="c-key">return</span> (
+    <span class="c-tag">&lt;div&gt;</span>
+      <span class="c-tag">&lt;p&gt;</span>カウント: {count}<span class="c-tag">&lt;/p&gt;</span>
+      <span class="c-tag">&lt;button</span> <span class="c-key">onClick</span>={() => <span class="c-fn">setCount</span>(count + <span class="c-num">1</span>)}<span class="c-tag">&gt;</span>
+        増やす
+      <span class="c-tag">&lt;/button&gt;</span>
+    <span class="c-tag">&lt;/div&gt;</span>
+  );
+}</code></pre>
+
+<!-- ライブデモ 2 -->
+<div class="demo">
+  <div class="demo-label">▶ ライブデモ — カウンター（実際に動きます）</div>
+  <div class="demo-inner" id="demo2"></div>
+</div>
+
+<div class="back"><a href="#toc">目次に戻る ↑</a></div>
+</section>
+
+
+<!-- ===================================================================
+     Section 3: 再レンダリング
+==================================================================== -->
+<section id="s3">
+<h2><span class="num">3</span>state が変わると何が起きるか（再レンダリング）</h2>
+
+<p><code>setCount</code> を呼んだとき、内部で何が起きているかを理解しておきましょう。</p>
+
+<ol style="line-height:2.2">
+  <li>ボタンをクリック → <code>onClick</code> ハンドラーが実行される</li>
+  <li><code>setCount(count + 1)</code> が呼ばれる</li>
+  <li>React が「<code>count</code> の state が変わった！」と検知する</li>
+  <li>React が <code>Counter</code> 関数を <strong>もう一度実行（再レンダリング）</strong> する</li>
+  <li><code>useState(0)</code> は「初回だけ 0 を使う」ので、2回目以降は新しい値を返す</li>
+  <li>新しい <code>count</code> の値で JSX が作られ、画面が更新される</li>
+</ol>
+
+<div class="box why">
+  <strong>再レンダリング = コンポーネント関数の再実行:</strong><br>
+  React の再レンダリングとは、コンポーネント関数をもう一度最初から実行することです。
+  <code>const [count, setCount] = useState(0)</code> の行も毎回通りますが、
+  React は「このコンポーネントの state はすでにある」と記憶していて、初期値 <code>0</code> ではなく更新後の値を返してくれます。
+</div>
+
+<h3>前の値をもとに更新する</h3>
+
+<p>今回のカウンターは <code>setCount(count + 1)</code> と書きました。
+これは「今の <code>count</code> に 1 を足した値にする」という意味です。
+多くの場合これで十分ですが、「前の値を確実に使いたい」ときは <strong>更新関数（関数形式）</strong> を使います。</p>
+
+<pre><code><span class="c-com">// 普通の書き方（多くのケースでこれで OK）</span>
+<span class="c-fn">setCount</span>(count + <span class="c-num">1</span>);
+
+<span class="c-com">// 関数形式（直前の state 値を確実に受け取る）</span>
+<span class="c-fn">setCount</span>(prev => prev + <span class="c-num">1</span>);</code></pre>
+
+<p>関数形式は Day09「state のスナップショット」で詳しく扱います。今日はまず基本形で慣れましょう。</p>
+
+<div class="back"><a href="#toc">目次に戻る ↑</a></div>
+</section>
+
+
+<!-- ===================================================================
+     Section 4: テキスト入力
+==================================================================== -->
+<section id="s4">
+<h2><span class="num">4</span>テキスト入力を state で管理する</h2>
+
+<p>ユーザーの入力をリアルタイムで画面に反映させるには、<strong>入力値を state で管理する</strong>パターンを使います。
+これを React では「<strong>制御されたコンポーネント（Controlled Component）</strong>」と呼びます。</p>
+
+<pre><code><span class="c-key">function</span> <span class="c-fn">NameInput</span>() {
+  <span class="c-key">const</span> [name, setName] = <span class="c-fn">useState</span>(<span class="c-str">""</span>);  <span class="c-com">// 初期値は空文字</span>
+
+  <span class="c-key">return</span> (
+    <span class="c-tag">&lt;div&gt;</span>
+      <span class="c-tag">&lt;input</span>
+        <span class="c-key">value</span>={name}                          <span class="c-com">// ① state の値を input に反映</span>
+        <span class="c-key">onChange</span>={(e) => <span class="c-fn">setName</span>(e.target.value)} <span class="c-com">// ② 入力されるたびに state を更新</span>
+      <span class="c-tag">/&gt;</span>
+      <span class="c-tag">&lt;p&gt;</span>こんにちは、{name} さん！<span class="c-tag">&lt;/p&gt;</span>
+    <span class="c-tag">&lt;/div&gt;</span>
+  );
+}</code></pre>
+
+<p>仕組みを整理すると：</p>
+<ol>
+  <li>ユーザーがキーを押す → <code>onChange</code> が発火 → <code>setName(e.target.value)</code> で state を更新</li>
+  <li>React がコンポーネントを再レンダリング</li>
+  <li><code>value={name}</code> が新しい state の値で更新される → 画面に反映</li>
+</ol>
+
+<div class="box note">
+  <strong><code>value</code> props をつけた input は「React が管理する」:</strong><br>
+  <code>value={name}</code> を渡すと、その input の中身は常に <code>name</code> state と同期します。
+  もし <code>onChange</code> なしで <code>value</code> だけ渡すと、入力しても文字が変わらない input になります（read-only 的な挙動）。
+</div>
+
+<!-- ライブデモ 3 -->
+<div class="demo">
+  <div class="demo-label">▶ ライブデモ — テキスト入力のリアルタイム反映</div>
+  <div class="demo-inner" id="demo3"></div>
+</div>
+
+<div class="back"><a href="#toc">目次に戻る ↑</a></div>
+</section>
+
+
+<!-- ===================================================================
+     Section 5: 複数の state
+==================================================================== -->
+<section id="s5">
+<h2><span class="num">5</span>複数の state を使う</h2>
+
+<p>1つのコンポーネントに <code>useState</code> をいくつでも書けます。
+管理したい状態の数だけ書けば OK です。</p>
+
+<pre><code><span class="c-key">function</span> <span class="c-fn">ProfileForm</span>() {
+  <span class="c-key">const</span> [name, setName]   = <span class="c-fn">useState</span>(<span class="c-str">""</span>);
+  <span class="c-key">const</span> [age,  setAge]    = <span class="c-fn">useState</span>(<span class="c-num">0</span>);
+  <span class="c-key">const</span> [isAdult, setIsAdult] = <span class="c-fn">useState</span>(<span class="c-num">false</span>);
+
+  <span class="c-key">return</span> (
+    <span class="c-tag">&lt;div&gt;</span>
+      <span class="c-tag">&lt;input</span>
+        <span class="c-key">placeholder</span>=<span class="c-str">"名前"</span>
+        <span class="c-key">value</span>={name}
+        <span class="c-key">onChange</span>={(e) => <span class="c-fn">setName</span>(e.target.value)}
+      <span class="c-tag">/&gt;</span>
+      <span class="c-tag">&lt;input</span>
+        <span class="c-key">type</span>=<span class="c-str">"number"</span>
+        <span class="c-key">value</span>={age}
+        <span class="c-key">onChange</span>={(e) => <span class="c-fn">setAge</span>(Number(e.target.value))}
+      <span class="c-tag">/&gt;</span>
+      <span class="c-tag">&lt;p&gt;</span>{name} さん、{age} 歳{isAdult ? <span class="c-str">"（成人）"</span> : <span class="c-str">""</span>}<span class="c-tag">&lt;/p&gt;</span>
+    <span class="c-tag">&lt;/div&gt;</span>
+  );
+}</code></pre>
+
+<div class="box note">
+  <strong>何を state にすればいい？</strong><br>
+  「ユーザーの操作によって変わる値」「時間とともに変わる値」は state にします。
+  変わらない値（固定のラベル文字列、設定値など）は state にせず、単なる変数や props にします。
+</div>
+
+<h3>配列を state にする</h3>
+
+<p>アイテムのリストを state で管理することもできます。
+配列を更新するときは <strong>元の配列を直接変更してはいけません</strong>。
+スプレッド構文（Day02）を使って新しい配列を作ります。</p>
+
+<pre><code><span class="c-key">function</span> <span class="c-fn">List</span>() {
+  <span class="c-key">const</span> [items, setItems] = <span class="c-fn">useState</span>([]);
+
+  <span class="c-key">function</span> <span class="c-fn">addItem</span>() {
+    <span class="c-com">// ❌ items.push("新しい項目") ← 直接変更はダメ</span>
+    <span class="c-com">// ✅ 新しい配列を作って渡す</span>
+    <span class="c-fn">setItems</span>([...items, <span class="c-str">"新しい項目"</span>]);
+  }
+
+  <span class="c-key">return</span> (
+    <span class="c-tag">&lt;div&gt;</span>
+      <span class="c-tag">&lt;button</span> <span class="c-key">onClick</span>={addItem}<span class="c-tag">&gt;</span>追加<span class="c-tag">&lt;/button&gt;</span>
+      <span class="c-tag">&lt;ul&gt;</span>
+        {items.<span class="c-fn">map</span>((item, i) => <span class="c-tag">&lt;li</span> <span class="c-key">key</span>={i}<span class="c-tag">&gt;</span>{item}<span class="c-tag">&lt;/li&gt;</span>)}
+      <span class="c-tag">&lt;/ul&gt;</span>
+    <span class="c-tag">&lt;/div&gt;</span>
+  );
+}</code></pre>
+
+<div class="box warn">
+  <strong>なぜ直接変更してはいけないのか？</strong><br>
+  <code>items.push(...)</code> のように元の配列を変更してしまうと、React は「配列が変わった」と検知できません。
+  React は「前回の値と今回の値を比較して変化を検知」するため、<strong>新しい配列を作って渡す</strong>必要があります。
+  詳しくは Day10 で扱います。
+</div>
+
+<!-- ライブデモ 4 -->
+<div class="demo">
+  <div class="demo-label">▶ ライブデモ — 入力してリストに追加</div>
+  <div class="demo-inner" id="demo4"></div>
+</div>
+
+<div class="back"><a href="#toc">目次に戻る ↑</a></div>
+</section>
+
+
+<!-- ===================================================================
+     Section 6: まとめ
+==================================================================== -->
+<section id="s6">
+<h2><span class="num">6</span>まとめ・よくある間違い</h2>
+
+<h3>今日のキーワード整理</h3>
+
+<table>
+  <thead>
+    <tr><th>用語</th><th>意味</th><th>例</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>イベントハンドラー</strong></td>
+      <td>ユーザーのアクションに応じて実行される関数</td>
+      <td><code>handleClick</code>、<code>handleChange</code></td>
+    </tr>
+    <tr>
+      <td><strong>onClick / onChange</strong></td>
+      <td>React の prop。イベントハンドラーを登録する</td>
+      <td><code>&lt;button onClick={fn}&gt;</code></td>
+    </tr>
+    <tr>
+      <td><strong>e.target.value</strong></td>
+      <td>input の現在の入力値</td>
+      <td><code>onChange={(e) => setText(e.target.value)}</code></td>
+    </tr>
+    <tr>
+      <td><strong>フック（Hook）</strong></td>
+      <td><code>use</code> で始まる React の特別な関数</td>
+      <td><code>useState</code>、<code>useEffect</code>（後日）</td>
+    </tr>
+    <tr>
+      <td><strong>useState</strong></td>
+      <td>コンポーネントに「状態」を持たせるフック</td>
+      <td><code>const [v, setV] = useState(初期値)</code></td>
+    </tr>
+    <tr>
+      <td><strong>再レンダリング</strong></td>
+      <td>state が変わったときに React がコンポーネントを再実行すること</td>
+      <td>setCount() を呼んだあとに自動で起きる</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>よくある間違い</h3>
+
+<table>
+  <thead>
+    <tr><th>間違い</th><th>正しい書き方</th><th>なぜ？</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>onClick={fn()}</code></td>
+      <td><code>onClick={fn}</code></td>
+      <td><code>fn()</code> は即実行。関数の参照を渡すべき</td>
+    </tr>
+    <tr>
+      <td><code>count = count + 1</code></td>
+      <td><code>setCount(count + 1)</code></td>
+      <td>直接変更では React が変化を検知できない</td>
+    </tr>
+    <tr>
+      <td><code>items.push(x); setItems(items)</code></td>
+      <td><code>setItems([...items, x])</code></td>
+      <td>元の配列を変更してから渡しても変化を検知できない</td>
+    </tr>
+    <tr>
+      <td><code>if (x) { useState(...) }</code></td>
+      <td>必ずコンポーネントの最上位で呼ぶ</td>
+      <td>フックのルール：条件分岐の中では呼べない</td>
+    </tr>
+    <tr>
+      <td><code>value={name}</code> だけで onChange なし</td>
+      <td>必ず <code>onChange</code> と一緒に使う</td>
+      <td>onChange がないと入力を受け付けない read-only になる</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="cheer">
+  <div class="big">🎉 Day 08 おつかれさまでした！</div>
+  <p style="margin:8px 0 0">
+    今日から React が「動く」ようになりました。イベントハンドラーと useState は
+    React アプリのあらゆる場面に登場する超基本です。演習で何度も手を動かして、体で覚えましょう。
+    次の Day 09 では「state のスナップショット」という少し奥深いテーマを扱います。
+  </p>
+</div>
+
+<div class="box note">
+  <strong>📖 公式ドキュメント（一次情報）:</strong><br>
+  ・<a href="https://react.dev/learn/responding-to-events" target="_blank">Responding to Events</a><br>
+  ・<a href="https://react.dev/learn/state-a-components-memory" target="_blank">State: A Component's Memory</a>
+</div>
+
+<div class="back"><a href="#toc">目次に戻る ↑</a></div>
+</section>
+
+</div><!-- /wrap -->
+
+<!-- ===================================================================
+     ライブデモ用 React コード
+==================================================================== -->
+<script type="text/babel" data-presets="react">
+
+// ===== デモ 1: イベントオブジェクト =====
+function Demo1() {
+  const [log, setLog] = React.useState("（ここに表示されます）");
+  return (
+    <div>
+      <input
+        placeholder="何か入力してみてください"
+        onChange={(e) => setLog("入力値: " + e.target.value)}
+        style={{ width: "100%" }}
+      />
+      <p style={{ marginTop: 8, color: "#0e7c6b", fontFamily: "JetBrains Mono, monospace", fontSize: ".88rem" }}>
+        {log}
+      </p>
+    </div>
+  );
+}
+
+// ===== デモ 2: カウンター =====
+function Demo2() {
+  const [count, setCount] = React.useState(0);
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+      <div className="count">{count}</div>
+      <div>
+        <button onClick={() => setCount(count + 1)}>＋１</button>
+        <button className="sec" onClick={() => setCount(0)}>リセット</button>
+      </div>
+    </div>
+  );
+}
+
+// ===== デモ 3: テキスト入力 =====
+function Demo3() {
+  const [name, setName] = React.useState("");
+  return (
+    <div>
+      <input
+        placeholder="名前を入力"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+      />
+      <p>{name ? `こんにちは、${name} さん！` : "（名前を入力してください）"}</p>
+    </div>
+  );
+}
+
+// ===== デモ 4: リスト追加 =====
+function Demo4() {
+  const [text, setText] = React.useState("");
+  const [items, setItems] = React.useState([]);
+
+  function handleAdd() {
+    if (!text.trim()) return;
+    setItems([...items, text.trim()]);
+    setText("");
+  }
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 8 }}>
+        <input
+          placeholder="追加するテキスト"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
+          style={{ flex: 1 }}
+        />
+        <button onClick={handleAdd}>追加</button>
+      </div>
+      {items.length > 0 ? (
+        <ul style={{ marginTop: 10, paddingLeft: 20 }}>
+          {items.map((item, i) => <li key={i}>{item}</li>)}
+        </ul>
+      ) : (
+        <p style={{ color: "#9a8f76", fontSize: ".9rem" }}>（まだ項目がありません）</p>
+      )}
+    </div>
+  );
+}
+
+// マウント
+ReactDOM.createRoot(document.getElementById("demo1")).render(<Demo1 />);
+ReactDOM.createRoot(document.getElementById("demo2")).render(<Demo2 />);
+ReactDOM.createRoot(document.getElementById("demo3")).render(<Demo3 />);
+ReactDOM.createRoot(document.getElementById("demo4")).render(<Demo4 />);
+</script>
+</body>
+</html>
