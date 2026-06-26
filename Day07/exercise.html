@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 07 — 演習: 条件付きレンダリング・リスト・純粋性</title>
+
+<!-- ① React 本体 / ② ReactDOM（画面描画・採点用） / ③ Babel(JSX翻訳) -->
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --paper:#f6efe2; --ink:#1d1a2b; --ink-soft:#4a4660;
+    --ember:#f04e2c; --ember-d:#c93a1c; --teal:#0e7c6b; --gold:#e8a200; --line:#e0d4bf; --card:#fffdf8;
+  }
+  * { box-sizing:border-box; }
+  body { font-family:"Zen Kaku Gothic New", system-ui, "Meiryo", sans-serif; line-height:1.85;
+    color:var(--ink); max-width:900px; margin:0 auto; padding:0 20px 90px;
+    background:
+      radial-gradient(900px 400px at 90% -5%, rgba(240,78,44,.06), transparent 60%),
+      var(--paper); }
+  .hero { margin:0 -20px 6px; padding:40px 26px 34px; color:#fdf6ea; border-radius:0 0 26px 26px;
+    background:
+      radial-gradient(500px 240px at 12% 0%, rgba(240,78,44,.5), transparent 60%),
+      linear-gradient(135deg,#211b33,#0f1f1d);
+    box-shadow:0 14px 36px rgba(27,24,48,.25); }
+  .hero .kicker { font-family:"JetBrains Mono",monospace; font-size:.72rem; letter-spacing:.2em;
+    color:#ffd9a8; text-transform:uppercase; }
+  .hero h1 { font-family:"Bricolage Grotesque","Zen Kaku Gothic New",sans-serif; font-weight:800;
+    margin:8px 0 6px; font-size:1.9rem; line-height:1.2; }
+  .hero h1 .pop { color:var(--ember); }
+  .hero p { margin:6px 0 0; color:#e7ddcf; }
+
+  .lead { background:#fef7e6; border-left:5px solid var(--gold); padding:12px 18px;
+    border-radius:0 10px 10px 0; margin:18px 0; }
+  .lead code { background:#efe2cf; }
+
+  h1 a, a { color:var(--ember-d); }
+  code { font-family:"JetBrains Mono",monospace; font-size:.86em; background:#efe2cf;
+    color:var(--ember-d); padding:2px 6px; border-radius:5px; }
+
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:16px 20px; margin:18px 0; box-shadow:0 6px 18px rgba(29,26,43,.05); }
+  .card h2 { margin:0 0 6px; font-size:1.12em; font-family:"Zen Kaku Gothic New",sans-serif;
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .status { font-weight:700; padding:3px 12px; border-radius:999px; font-size:.78em;
+    font-family:"JetBrains Mono",monospace; letter-spacing:.03em; }
+  .pass { background:#e3f6ec; color:#0b6b4f; border:1px solid #6bbf9a; }
+  .fail { background:#fdecec; color:#c93a1c; border:1px solid #e39b8a; }
+  .todo { background:#efe7d6; color:#6b6450; border:1px solid #cfc3aa; }
+  .desc { color:var(--ink-soft); font-size:.92em; }
+  .preview { border:1px dashed #c9bea6; border-radius:10px; padding:12px 16px; margin-top:12px;
+    background:#fffdf6; }
+  .preview-label { font-size:.74em; color:#9a8f76; margin-bottom:6px;
+    font-family:"JetBrains Mono",monospace; letter-spacing:.05em; }
+  .warning { border:1px solid var(--ember); border-radius:10px; padding:8px 14px; background:#fdeee8; color:var(--ember-d); }
+  pre { background:#1b1830; color:#f0bfae; padding:12px 14px; border-radius:10px; overflow-x:auto;
+    font-size:.82em; font-family:"JetBrains Mono",monospace; }
+  .hint { font-size:.86em; color:var(--ink-soft); margin-top:6px; }
+  #results { margin-top:6px; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="kicker">◆ Day 07 — 演習</div>
+  <h1>条件分岐と<span class="pop">リスト</span>を書いてみよう</h1>
+  <p>if・三項演算子・&&・null・map・key を実際に手で書く練習。書いて保存したら、下に合否が自動で出ます。</p>
+</div>
+
+<div class="lead">
+  <strong>進め方:</strong> このファイル <code>Day07/exercise.html</code> をエディタで開き、各課題の
+  空欄を自分のコードに置き換えて <strong>保存 → ブラウザで再読み込み</strong>してください。
+  下に各課題の合否（✅/❌）と表示プレビューが出ます。未回答は「未回答」と表示されます。<br>
+  解説は <code>Day07/lesson.html</code>。模範解答は出しません。書けたらコードを貼ってレビューに出してください。
+</div>
+
+<div id="results"></div>
+
+<!-- ===================================================================
+     ここから下が「あなたが編集する場所」です。
+==================================================================== -->
+<script type="text/babel" data-presets="react">
+
+// =====================================================================
+//  演習（ここを編集します）
+// =====================================================================
+
+// --- 演習1（やさしい）: if 文で出し分ける --------------------------
+// 子コンポーネント Status を完成させてください。
+// ・isOnline という props（真偽値）を受け取ります。
+// ・isOnline が true なら <h2>オンライン</h2>、false なら <h2>オフライン</h2> を返してください。
+// ・ヒント: if (isOnline) { return ...; } のように、関数の途中で return して出し分けます。
+function Status({ isOnline }) {
+  // ここにコードを書いてください
+  if (isOnline){
+    return <h2>オンライン</h2>;
+  }
+  else{
+    return <h2>オフライン</h2>
+  }
+  return <span data-unanswered="true"></span>;
+}
+function Exercise1() {       // ← 親。ここは編集しません
+  return <Status isOnline={true} />;
+}
+
+
+// --- 演習2（ふつう）: 三項演算子 -----------------------------------
+// 子コンポーネント Item を完成させてください。
+// ・isPacked, name という props を受け取ります。
+// ・<li> の中で、isPacked が true なら "{name} ✅"、false なら "{name}" だけを表示してください。
+// ・ヒント: { isPacked ? name + " ✅" : name } のように三項演算子を { } の中に書きます。
+function Item({ isPacked, name }) {
+  // ここにコードを書いてください（<li> を return）
+    return <ul><li key = {1}>{isPacked ? name + "✅": name}</li></ul>
+  return <span data-unanswered="true"></span>;
+}
+function Exercise2() {       // ← 親。編集しません
+  return <Item isPacked={true} name="懐中電灯" />;
+}
+
+
+// --- 演習3（ふつう）: && で「あるときだけ」表示 ----------------------
+// 子コンポーネント Notification を完成させてください。
+// ・count という props（数値）を受け取ります。
+// ・count が 0 より大きいときだけ <p>新着 {count} 件</p> を表示してください。
+// ・count が 0 のときは、何も表示しないでください。
+// ・ヒント: { count > 0 && <p>...</p> } のように書きます。「count &&」だけだと0が表示されてしまうので注意。
+function Notification({ count }) {
+  // ここにコードを書いてください
+  return count > 0 && <p>新着 {count} 件</p>;
+  return <span data-unanswered="true"></span>;
+}
+function Exercise3() {       // ← 親。編集しません
+  return <Notification count={3} />;
+}
+
+
+// --- 演習4（ふつう）: null を return して非表示にする -----------------
+// 子コンポーネント WarningBanner を完成させてください。
+// ・warn という props（真偽値）を受け取ります。
+// ・warn が false なら、何も表示しない（null を返す）でください。
+// ・warn が true なら、<div className="warning">注意してください</div> を返してください。
+function WarningBanner({ warn }) {
+  // ここにコードを書いてください
+  return <>{warn ? <div className = "warning">注意してください</div> : null}</>
+  // ブーリアン単体には{}いらない
+  return <span data-unanswered="true"></span>;
+}
+function Exercise4() {       // ← 親。編集しません（warn は false）
+  return <WarningBanner warn={false} />;
+}
+
+
+// --- 演習5（ちょいむず）: map でリストを作る + key ---------------------
+// fruits 配列を1つずつ <li> に変換して、<ul> で包んで返してください。
+// ・各 <li> には key を付けること（id を使うこと）。
+// ・<li> の中身は果物の name を表示してください。
+function Exercise5() {
+  const fruits = [
+    { id: 1, name: "りんご" },
+    { id: 2, name: "みかん" },
+    { id: 3, name: "ぶどう" },
+  ];
+
+  // ここにコードを書いてください
+  // fruits.map((f) => <li key={...}>{f.name}</li>) を <ul> で包んで return
+    return <ul>{fruits.map((fruit) => <li key={fruit.id}> {fruit.name}</li>)}</ul>
+  return <span data-unanswered="true"></span>;
+}
+
+
+// --- 演習6（むず・総合）: Todoリスト ----------------------------------
+// tasks 配列から、条件分岐とmapを組み合わせたリストを作ってください。
+// ・done が true のタスクは <del>text</del>（打ち消し線）、false なら text のまま表示。
+// ・各タスクは <li key={id}> ... </li> として、全体は <ul> で包む。
+// ・tasks の中で done が false のものの件数を数え、0件より多いときだけ
+//   <ul> の下に <p>残り {件数} 件</p> を表示する（0件のときは何も表示しない）。
+// ・ヒント: 件数を数えるには tasks.filter((t) => !t.done).length が使えます（Day03の復習）。
+function Exercise6() {
+  const tasks = [
+    { id: 1, text: "牛乳を買う", done: true },
+    { id: 2, text: "宿題をする", done: false },
+    { id: 3, text: "部屋を片付ける", done: false },
+  ];
+  const numTodo = tasks.filter((todo) => !todo.done).length
+  return <><ul>{tasks.map((task) => <li key = {task.id}> {!task.done ? task.text : <del> {task.text}</del>}</li> )}</ul>
+  {numTodo > 0 && <p>残り {numTodo} 件</p>}</>
+  // とにかくタグのなかにjs書くときは{}
+  // ここにコードを書いてください
+  return <span data-unanswered="true"></span>;
+}
+
+
+// =====================================================================
+//  採点ハーネス（ここから下は編集しません）
+// =====================================================================
+const norm = (s) => (s || "").replace(/\s+/g, " ").trim();
+
+function evaluate(Comp) {
+  const container = document.createElement("div");
+  try {
+    const root = ReactDOM.createRoot(container);
+    ReactDOM.flushSync(() => {
+      root.render(React.createElement(Comp));
+    });
+    const result = { ok: true, html: container.innerHTML, text: norm(container.textContent) };
+    root.unmount();
+    return result;
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+}
+
+const TASKS = [
+  {
+    n: 1, title: "演習1: if 文で出し分ける",
+    desc: "isOnline=true → 「オンライン」を h2 表示",
+    Comp: Exercise1,
+    check: (html, text) => /<h2/.test(html) && text.includes("オンライン") && !text.includes("オフライン"),
+  },
+  {
+    n: 2, title: "演習2: 三項演算子",
+    desc: "isPacked=true → 「懐中電灯 ✅」を li 表示",
+    Comp: Exercise2,
+    check: (html, text) => /<li/.test(html) && text.includes("懐中電灯") && text.includes("✅"),
+  },
+  {
+    n: 3, title: "演習3: && で「あるときだけ」表示",
+    desc: "count=3 → 「新着 3 件」を表示",
+    Comp: Exercise3,
+    check: (html, text) => text.includes("新着") && text.includes("3"),
+  },
+  {
+    n: 4, title: "演習4: null を return して非表示",
+    desc: "warn=false → 何も表示しない（空）",
+    Comp: Exercise4,
+    check: (html, text) => html.trim() === "",
+  },
+  {
+    n: 5, title: "演習5: map でリスト + key",
+    desc: "ul の中に li が3つ（りんご・みかん・ぶどう）",
+    Comp: Exercise5,
+    check: (html, text) => {
+      const liCount = (html.match(/<li/g) || []).length;
+      return /<ul/.test(html) && liCount === 3 &&
+        ["りんご", "みかん", "ぶどう"].every((n) => text.includes(n));
+    },
+  },
+  {
+    n: 6, title: "演習6: Todoリスト（総合）",
+    desc: "完了は打ち消し線・未完了はそのまま・残り件数(2件)を表示",
+    Comp: Exercise6,
+    check: (html, text) => {
+      const liCount = (html.match(/<li/g) || []).length;
+      const hasDel = /<del/.test(html) && html.includes("牛乳を買う");
+      const hasPlain = text.includes("宿題をする") && text.includes("部屋を片付ける");
+      const hasRemaining = text.includes("残り") && text.includes("2");
+      return /<ul/.test(html) && liCount === 3 && hasDel && hasPlain && hasRemaining;
+    },
+  },
+];
+
+function badge(kind, label) {
+  return `<span class="status ${kind}">${label}</span>`;
+}
+
+function run() {
+  const root = document.getElementById("results");
+  let html = "";
+  for (const t of TASKS) {
+    const r = evaluate(t.Comp);
+    let status, previewHtml = "", note = "";
+
+    if (!r.ok) {
+      status = badge("fail", "エラー");
+      note = `<pre>${r.error}</pre>`;
+    } else if (r.html.includes('data-unanswered="true"')) {
+      status = badge("todo", "未回答");
+    } else if (t.check(r.html, r.text)) {
+      status = badge("pass", "✅ 合格");
+      previewHtml = r.html || "<em>(表示なし)</em>";
+    } else {
+      status = badge("fail", "❌ もう少し");
+      previewHtml = r.html || "<em>(表示なし)</em>";
+      note = `<div class="hint">いまの表示テキスト: 「${r.text}」</div>`;
+    }
+
+    const preview = previewHtml
+      ? `<div class="preview"><div class="preview-label">▼ 実際の表示プレビュー</div>${previewHtml}</div>`
+      : "";
+
+    html += `
+      <div class="card">
+        <h2>${t.title} ${status}</h2>
+        <div class="desc">目標: ${t.desc}</div>
+        ${preview}
+        ${note}
+      </div>`;
+  }
+  root.innerHTML = html;
+}
+
+run();
+</script>
+</body>
+</html>

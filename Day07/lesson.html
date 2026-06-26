@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 07 — 条件付きレンダリング・リスト・純粋性</title>
+
+<!-- 特徴的なフォント（表示用）。読み込めない環境でも下のフォールバックで崩れません -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --paper:   #f6efe2;   /* 紙色の背景 */
+    --paper-2: #efe5d3;
+    --ink:     #1d1a2b;   /* 文字（濃いインク） */
+    --ink-soft:#4a4660;
+    --ember:   #f04e2c;   /* 主役のアクセント（朱） */
+    --ember-d: #c93a1c;
+    --teal:    #0e7c6b;   /* 補助（深い緑青） */
+    --gold:    #e8a200;
+    --line:    #e0d4bf;
+    --card:    #fffdf8;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: "Zen Kaku Gothic New", system-ui, "Hiragino Sans", "Meiryo", sans-serif;
+    line-height: 1.95; color: var(--ink);
+    margin: 0; padding: 0 0 100px;
+    background:
+      radial-gradient(1200px 500px at 80% -10%, rgba(240,78,44,.07), transparent 60%),
+      radial-gradient(900px 500px at -10% 20%, rgba(14,124,107,.06), transparent 55%),
+      var(--paper);
+    background-attachment: fixed;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 0 22px; }
+
+  /* ===== ヒーロー ===== */
+  .hero {
+    position: relative; overflow: hidden; color: #fdf6ea;
+    background:
+      radial-gradient(600px 300px at 15% 10%, rgba(240,78,44,.55), transparent 60%),
+      radial-gradient(700px 360px at 90% 80%, rgba(14,124,107,.45), transparent 60%),
+      linear-gradient(135deg, #211b33 0%, #161226 55%, #0f1f1d 100%);
+    padding: 70px 22px 78px;
+  }
+  .hero::after {
+    content:""; position:absolute; inset:0; opacity:.5; pointer-events:none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.05'/%3E%3C/svg%3E");
+  }
+  .hero-inner { max-width: 880px; margin: 0 auto; position: relative; z-index: 1; }
+  .kicker {
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:"JetBrains Mono", monospace; font-size:.74rem; letter-spacing:.22em;
+    text-transform:uppercase; color:#ffd9a8;
+    border:1px solid rgba(255,217,168,.35); border-radius:999px; padding:6px 14px;
+    background:rgba(255,217,168,.08);
+    animation: rise .7s .05s both;
+  }
+  .hero h1 {
+    font-family:"Bricolage Grotesque", "Zen Kaku Gothic New", sans-serif;
+    font-weight:800; font-size: clamp(2.1rem, 6vw, 3.4rem); line-height:1.08;
+    margin:18px 0 14px; letter-spacing:-.01em;
+    animation: rise .7s .15s both;
+  }
+  .hero h1 .pop { color: var(--ember);
+    text-shadow: 0 0 30px rgba(240,78,44,.45); }
+  .hero .lead { max-width: 620px; color:#e7ddcf; font-size:1.06rem;
+    animation: rise .7s .27s both; }
+  .hero .meta { margin-top:26px; display:flex; flex-wrap:wrap; gap:10px;
+    animation: rise .7s .4s both; }
+  .chip { font-family:"JetBrains Mono", monospace; font-size:.78rem;
+    background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.16);
+    color:#f3ead9; padding:6px 12px; border-radius:8px; }
+  .chip b { color: var(--gold); }
+
+  /* 分岐フロー（ヒーローの主役ビジュアル） */
+  .flow { margin-top:36px; display:grid; grid-template-columns:1fr auto 1fr;
+    align-items:center; gap:0; animation: rise .8s .5s both; }
+  .node { border-radius:16px; padding:16px 14px; text-align:center;
+    border:1px solid rgba(255,255,255,.18); backdrop-filter: blur(2px); }
+  .node.parent { background:linear-gradient(135deg, rgba(240,78,44,.22), rgba(240,78,44,.05)); }
+  .node.child  { background:linear-gradient(135deg, rgba(14,124,107,.24), rgba(14,124,107,.05)); }
+  .node .role { font-family:"JetBrains Mono",monospace; font-size:.7rem; letter-spacing:.15em;
+    text-transform:uppercase; opacity:.7; }
+  .node .name { font-family:"Bricolage Grotesque",sans-serif; font-weight:700; font-size:1.15rem; margin-top:2px; }
+  .node .sub { font-size:.8rem; opacity:.8; }
+  .arrow { position:relative; padding:0 6px; min-width:96px; text-align:center; }
+  .arrow .pkg { font-size:1.4rem; animation: slide 2.4s ease-in-out infinite; display:inline-block; }
+  .arrow .lbl { display:block; font-family:"JetBrains Mono",monospace; font-size:.72rem;
+    color:#ffd9a8; margin-top:2px; }
+  .arrow::before { content:""; position:absolute; top:50%; left:0; right:0; height:2px;
+    background:repeating-linear-gradient(90deg,#ffd9a8 0 7px, transparent 7px 14px); opacity:.55; }
+
+  @keyframes slide { 0%,100%{ transform:translateX(-10px);} 50%{ transform:translateX(10px);} }
+  @keyframes rise { from{ opacity:0; transform:translateY(16px);} to{ opacity:1; transform:none;} }
+
+  /* ===== 進捗 ===== */
+  .progress { margin:30px 0 6px; }
+  .progress .label { display:flex; justify-content:space-between;
+    font-family:"JetBrains Mono",monospace; font-size:.74rem; color:var(--ink-soft);
+    letter-spacing:.08em; margin-bottom:7px; }
+  .bar { height:11px; border-radius:999px; background:var(--paper-2);
+    border:1px solid var(--line); overflow:hidden; }
+  .bar > span { display:block; height:100%; width:50%;
+    background:linear-gradient(90deg, var(--ember), var(--gold));
+    border-radius:999px; box-shadow:0 0 12px rgba(240,78,44,.5); }
+
+  /* ===== 見出し ===== */
+  h2 {
+    font-family:"Bricolage Grotesque","Zen Kaku Gothic New",sans-serif; font-weight:700;
+    font-size:1.5rem; margin:58px 0 6px; padding-bottom:10px; scroll-margin-top:14px;
+    border-bottom:2px solid var(--line); position:relative;
+  }
+  h2 .num { font-family:"JetBrains Mono",monospace; color:var(--ember);
+    font-size:1rem; margin-right:12px; vertical-align:2px; }
+  h3 { font-family:"Zen Kaku Gothic New",sans-serif; font-weight:700; color:var(--teal);
+    font-size:1.12rem; margin:28px 0 4px; }
+  h3::before { content:"◆"; color:var(--ember); font-size:.7em; margin-right:8px; vertical-align:2px; }
+  p { margin:12px 0; }
+
+  /* ===== コード ===== */
+  code { font-family:"JetBrains Mono",monospace; font-size:.86em;
+    background:#efe2cf; color:var(--ember-d); padding:2px 6px; border-radius:5px; }
+  pre {
+    background:#1b1830; color:#e9e3d4; border-radius:14px; padding:20px 20px 18px;
+    overflow-x:auto; line-height:1.7; font-size:.86rem; position:relative;
+    border:1px solid #2c2745; box-shadow:0 16px 34px rgba(27,24,48,.22);
+    margin:18px 0;
+  }
+  pre::before { content:"JSX"; position:absolute; top:9px; right:14px;
+    font-family:"JetBrains Mono",monospace; font-size:.65rem; letter-spacing:.18em; color:#6a6390; }
+  pre code { background:none; color:inherit; padding:0; font-size:.92em; }
+  .c-key { color:#ff9d7a; }
+  .c-com { color:#7d769c; font-style:italic; }
+  .c-str { color:#9fe3b0; }
+  .c-tag { color:#7fd6ff; }
+
+  /* ===== 注記ボックス ===== */
+  .box { border-radius:0 12px 12px 0; padding:14px 18px; margin:18px 0;
+    background:var(--card); border-left:5px solid var(--line); }
+  .note { border-left-color:var(--gold);  background:#fef7e6; }
+  .why  { border-left-color:var(--teal);  background:#e9f6f2; }
+  .warn { border-left-color:var(--ember); background:#fdeee8; }
+  .box strong { color:var(--ink); }
+
+  /* 励まし */
+  .cheer { margin:24px 0; padding:18px 22px; border-radius:16px; font-weight:700;
+    color:#5a2415; background:linear-gradient(135deg,#ffe9c9,#ffd9c2);
+    border:1px solid #f3c39e; box-shadow:0 8px 22px rgba(240,78,44,.12); }
+  .cheer .big { font-family:"Bricolage Grotesque",sans-serif; font-size:1.1rem; }
+
+  /* 目次 */
+  .toc { background:var(--card); border:1px solid var(--line); border-radius:18px;
+    padding:20px 26px; box-shadow:0 10px 28px rgba(29,26,43,.06); margin:26px 0; }
+  .toc strong { font-family:"Bricolage Grotesque",sans-serif; font-size:1.05rem; color:var(--ember-d); }
+  .toc ol { margin:12px 0 2px; padding-left:20px; }
+  .toc li { margin:5px 0; }
+  .toc a { color:var(--ink); text-decoration:none; border-bottom:1px solid transparent; }
+  .toc a:hover { color:var(--ember-d); border-bottom-color:var(--ember); }
+
+  /* テーブル */
+  table { border-collapse:collapse; width:100%; margin:18px 0; background:var(--card);
+    border-radius:12px; overflow:hidden; box-shadow:0 6px 18px rgba(29,26,43,.06); font-size:.95rem; }
+  th,td { border:1px solid var(--line); padding:10px 14px; text-align:left; vertical-align:top; }
+  th { background:linear-gradient(135deg,var(--ink),#2e2a47); color:#f6efe2; border-color:rgba(255,255,255,.15);
+    font-family:"Zen Kaku Gothic New",sans-serif; }
+  tr:nth-child(even) td { background:#faf4e9; }
+
+  /* 戻るリンク */
+  .back { text-align:right; margin:10px 0 0; }
+  .back a { font-family:"JetBrains Mono",monospace; font-size:.74rem; text-decoration:none;
+    color:var(--ink-soft); border:1px solid var(--line); border-radius:999px; padding:4px 14px;
+    background:var(--card); transition:.18s; }
+  .back a:hover { background:var(--ink); color:var(--paper); border-color:var(--ink); }
+  a { color:var(--ember-d); }
+
+  /* 対比カード */
+  .compare { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:18px 0; }
+  .compare > div { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px 16px; }
+  .compare h4 { margin:0 0 6px; font-family:"JetBrains Mono",monospace; font-size:.82rem;
+    letter-spacing:.05em; color:var(--teal); }
+  @media (max-width:620px){ .compare{ grid-template-columns:1fr; } .flow{ grid-template-columns:1fr; gap:12px; } .arrow::before{ display:none; } .arrow{ transform:rotate(90deg); } }
+
+  /* CTA */
+  .cta { margin:44px 0 0; padding:36px 26px; border-radius:22px; text-align:center;
+    color:#fdf6ea; position:relative; overflow:hidden;
+    background:
+      radial-gradient(500px 240px at 20% 0%, rgba(240,78,44,.5), transparent 60%),
+      linear-gradient(135deg,#211b33,#0f1f1d); }
+  .cta h2 { border:none; color:#fff; margin:0 0 8px; padding:0; }
+  .cta p { color:#e7ddcf; max-width:560px; margin:8px auto; }
+  .cta .btn { display:inline-block; margin-top:18px; padding:14px 34px;
+    font-family:"Bricolage Grotesque",sans-serif; font-weight:800; font-size:1.02rem;
+    text-decoration:none; color:#2a1206; border-radius:999px;
+    background:linear-gradient(90deg,var(--ember),var(--gold));
+    box-shadow:0 10px 26px rgba(240,78,44,.4); transition:.2s; }
+  .cta .btn:hover { transform:translateY(-3px); box-shadow:0 16px 32px rgba(240,78,44,.5); }
+</style>
+</head>
+<body>
+
+<!-- ============ ヒーロー ============ -->
+<header class="hero" id="top">
+  <div class="hero-inner">
+    <span class="kicker">◆ Day 07 — React 学習の旅</span>
+    <h1>表示するか、しないか。<br><span class="pop">条件分岐とリスト</span>を究める</h1>
+    <p class="lead">Day06 で Props を渡せるようになったあなたへ。今日は「<strong>状況に応じて表示を変える</strong>（条件付きレンダリング）」と「<strong>配列からまとめてカードを作る</strong>（リストのレンダリング）」、そして両方の土台にある「<strong>純粋性（Purity）</strong>」というReactの大原則を学びます。</p>
+
+    <div class="meta">
+      <span class="chip">所要 <b>35〜50分</b></span>
+      <span class="chip">前提 <b>Day06 / Props</b></span>
+      <span class="chip">ゴール <b>条件分岐・map・key・純粋関数</b></span>
+    </div>
+
+    <!-- 条件分岐フローの図 -->
+    <div class="flow">
+      <div class="node parent">
+        <div class="role">Condition</div>
+        <div class="name">isLoggedIn</div>
+        <div class="sub">分かれ道（true / false）</div>
+      </div>
+      <div class="arrow">
+        <span class="pkg">🔀</span>
+        <span class="lbl">条件分岐</span>
+      </div>
+      <div class="node child">
+        <div class="role">Render</div>
+        <div class="name">A or B</div>
+        <div class="sub">どちらを描くか決まる</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- 進捗 -->
+  <div class="progress">
+    <div class="label"><span>CURRICULUM PROGRESS</span><span>Day 07 / 14</span></div>
+    <div class="bar"><span></span></div>
+  </div>
+
+  <div class="cheer">
+    <span class="big">🎯 今日のゴール:</span> <b>① if / 三項演算子 / && で表示を切り替える</b>／<b>② map() で配列からリストを作る</b>／<b>③ key の役割を理解する</b>／<b>④ 純粋性（同じ入力には同じ出力）を守る</b>。
+    この4つで、Reactらしい「データに応じて画面が変わる」感覚がつかめます。
+  </div>
+
+  <div class="box note">
+    <strong>条件付きレンダリングとは:</strong> 「状況によって表示する内容を変える」ことです。
+    JSX自体は特別な文法ではなく、ふつうの <strong>JavaScriptの条件分岐</strong>（if文・三項演算子・論理演算子）がそのまま使えます。
+    <strong>リストのレンダリング</strong>は、配列の各要素を<strong>同じ形のJSXに変換</strong>して並べることです。Day03で学んだ <code>map()</code> がそのまま主役になります。
+  </div>
+
+  <p><strong>公式ドキュメント（一次情報 / react.dev）:</strong></p>
+  <ul>
+    <li><a href="https://react.dev/learn/conditional-rendering">Conditional Rendering（条件付きレンダリング）</a></li>
+    <li><a href="https://react.dev/learn/rendering-lists">Rendering Lists（リストのレンダリング）</a></li>
+    <li><a href="https://react.dev/learn/keeping-components-pure">Keeping Components Pure（コンポーネントを純粋に保つ）</a></li>
+  </ul>
+
+  <!-- ============ 目次 ============ -->
+  <nav class="toc">
+    <strong>目次</strong>
+    <ol>
+      <li><a href="#sec0">0. なぜ「条件分岐」と「リスト」が必要か</a></li>
+      <li><a href="#sec1">1. if 文で出し分ける</a></li>
+      <li><a href="#sec2">2. 三項演算子 <code>condition ? A : B</code></a></li>
+      <li><a href="#sec3">3. 論理 AND <code>&&</code> で「あるときだけ」表示</a></li>
+      <li><a href="#sec4">4. null を return — 何も表示しない</a></li>
+      <li><a href="#sec5">5. リストのレンダリング — 配列の <code>map()</code></a></li>
+      <li><a href="#sec6">6. key — なぜ必要？ 何を入れる？</a></li>
+      <li><a href="#sec7">7. 純粋性（Purity）— コンポーネントは「純粋関数」</a></li>
+      <li><a href="#sec8">8. つまずきポイント早見表</a></li>
+      <li><a href="#sec9">9. 演習へ</a></li>
+    </ol>
+  </nav>
+
+  <!-- ============ 0 ============ -->
+  <h2 id="sec0"><span class="num">00</span>なぜ「条件分岐」と「リスト」が必要か</h2>
+
+  <p>Day06までは、コンポーネントは渡された Props をそのまま表示するだけでした。
+  しかし実際のアプリでは「ログインしている人にだけメニューを出す」「投稿が0件のときは『まだありません』と表示する」「ユーザー一覧を1人ずつカードにして並べる」——
+  こうした<strong>状況に応じて表示そのものを変える</strong>場面が大量に出てきます。</p>
+
+  <p>JSXは見た目こそHTMLに似ていますが、中身はただの<strong>JavaScriptの式</strong>です。
+  だから「JSX専用の特別な条件分岐構文」は存在しません。普段のJavaScriptで使う <code>if</code>・三項演算子・<code>&&</code>・<code>map()</code> が、そのままReactでも主役になります。</p>
+
+  <div class="box why">
+    <strong>覚えておくこと:</strong> Reactには「もし〜なら表示」という専用構文はありません。
+    <strong>「JSXを作るかどうか」「どのJSXを作るか」を、ふつうのJavaScriptの条件分岐で決める</strong>——これが条件付きレンダリングの正体です。
+  </div>
+
+  <p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+  <!-- ============ 1 ============ -->
+  <h2 id="sec1"><span class="num">01</span>if 文で出し分ける</h2>
+
+  <p>一番素朴な方法は、コンポーネントの中で<strong>関数の早期 return（途中で結果を返す）</strong>を使うことです。
+  Day01で学んだ「関数は <code>return</code> した時点で処理を終える」という性質をそのまま使います。</p>
+
+  <pre><code><span class="c-key">function</span> <span class="c-tag">Greeting</span>({ <span class="c-key">isLoggedIn</span> }) {
+  <span class="c-key">if</span> (isLoggedIn) {
+    <span class="c-key">return</span> <span class="c-tag">&lt;h1&gt;</span>ようこそ、戻ってきましたね！<span class="c-tag">&lt;/h1&gt;</span>;
+  }
+  <span class="c-key">return</span> <span class="c-tag">&lt;h1&gt;</span>サインインしてください。<span class="c-tag">&lt;/h1&gt;</span>;
+}</code></pre>
+
+  <p><code>isLoggedIn</code> という props（真偽値）の値によって、<strong>そもそも別のJSXをreturnする</strong>というシンプルな発想です。
+  「画面の一部を変える」のではなく「コンポーネントが返す結果を丸ごと変える」と考えると分かりやすいでしょう。</p>
+
+  <div class="box note">
+    <strong>1行で書きたいときは早期returnが便利。</strong> 「条件に当てはまらなければ何も表示しない」場合は、
+    <code>if (!data) return null;</code> のように先頭で<strong>さっさと抜ける</strong>書き方がよく使われます（null の意味は<a href="#sec4">セクション4</a>で説明します）。
+  </div>
+
+  <p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+  <!-- ============ 2 ============ -->
+  <h2 id="sec2"><span class="num">02</span>三項演算子 <code>condition ? A : B</code></h2>
+
+  <p>if文は「文（statement）」なので、<strong>JSXの中（{ } の中）には直接書けません</strong>。
+  JSXの中で条件分岐をしたいときは、<strong>式（expression）</strong>である<strong>三項演算子</strong>を使います。</p>
+
+  <pre><code><span class="c-key">function</span> <span class="c-tag">Item</span>({ <span class="c-key">isPacked, name</span> }) {
+  <span class="c-key">return</span> (
+    <span class="c-tag">&lt;li&gt;</span>
+      {isPacked ? name + <span class="c-str">" ✅"</span> : name}
+    <span class="c-tag">&lt;/li&gt;</span>
+  );
+}</code></pre>
+
+  <p><code>条件 ? 真のときの値 : 偽のときの値</code> という形です。
+  日本語にすると「<strong>isPacked が true なら『name + ✅』、そうでなければ『name』</strong>」。
+  if文と違って<strong>これ自体が1つの値（式）</strong>なので、<code>{ }</code> の中にそのまま埋め込めます。</p>
+
+  <h3>JSXそのものを切り替えることもできる</h3>
+  <pre><code><span class="c-key">function</span> <span class="c-tag">Item</span>({ <span class="c-key">isPacked, name</span> }) {
+  <span class="c-key">return</span> (
+    <span class="c-tag">&lt;li&gt;</span>
+      {isPacked ? (
+        <span class="c-tag">&lt;del&gt;</span>{name}<span class="c-tag">&lt;/del&gt;</span>
+      ) : (
+        name
+      )}
+    <span class="c-tag">&lt;/li&gt;</span>
+  );
+}</code></pre>
+
+  <div class="box why">
+    <strong>if文 と 三項演算子、どちらを使う？</strong> 「コンポーネント全体を丸ごと出し分ける」ときは if文（セクション1）、
+    「JSXの<strong>一部分だけ</strong>を出し分ける」ときは三項演算子、と使い分けるのが定番です。
+  </div>
+
+  <p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+  <!-- ============ 3 ============ -->
+  <h2 id="sec3"><span class="num">03</span>論理 AND <code>&&</code> で「あるときだけ」表示</h2>
+
+  <p>「条件がtrueのときだけ表示し、falseのときは何も表示しない」——この場合、三項演算子で <code>: null</code> と書くより、
+  もっと短く書ける方法があります。<strong>論理AND演算子 <code>&&</code></strong> です。</p>
+
+  <pre><code><span class="c-key">function</span> <span class="c-tag">Item</span>({ <span class="c-key">isPacked, name</span> }) {
+  <span class="c-key">return</span> (
+    <span class="c-tag">&lt;li&gt;</span>
+      {name} {isPacked && <span class="c-str">"✅"</span>}
+    <span class="c-tag">&lt;/li&gt;</span>
+  );
+}</code></pre>
+
+  <p>JavaScriptの <code>&&</code> は「<strong>左側がtrueなら右側の値を返す。左側がfalseなら、右側を評価せずfalseのまま返す</strong>」という仕組みです。
+  Reactは<strong>真偽値の <code>false</code>・<code>null</code>・<code>undefined</code> を「何も表示しない」として扱う</strong>ので、結果的に「trueのときだけ右側を表示する」ように見えます。</p>
+
+  <div class="box warn">
+    <strong>危険な罠: 左側に「数値の0」を置かない。</strong>
+    <code>{count && &lt;p&gt;件あります&lt;/p&gt;}</code> で <code>count</code> が <code>0</code> のとき、
+    <code>&&</code> は<strong>左側の 0 をそのまま返してしまいます</strong>。Reactは数値の <code>0</code> を「非表示」とは扱わず<strong>そのまま画面に表示</strong>するため、
+    画面にポツンと「0」が出る事故が起きます。<strong>対策:</strong> <code>count &gt; 0 &&</code> のように、必ず<strong>真偽値になる条件</strong>を左に置きましょう。
+  </div>
+
+  <p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+  <!-- ============ 4 ============ -->
+  <h2 id="sec4"><span class="num">04</span>null を return — 何も表示しない</h2>
+
+  <p>コンポーネントが「ある条件のときは<strong>何も表示したくない</strong>」場合、<code>null</code> をreturnします。
+  Reactは <code>null</code> を「ここには何も描かない」という意味として理解します。</p>
+
+  <pre><code><span class="c-key">function</span> <span class="c-tag">WarningBanner</span>({ <span class="c-key">warn</span> }) {
+  <span class="c-key">if</span> (!warn) {
+    <span class="c-key">return</span> <span class="c-key">null</span>; <span class="c-com">// 何も表示しない</span>
+  }
+  <span class="c-key">return</span> <span class="c-tag">&lt;div</span> className=<span class="c-str">"warning"</span><span class="c-tag">&gt;</span>警告です！<span class="c-tag">&lt;/div&gt;</span>;
+}</code></pre>
+
+  <div class="box note">
+    <strong>実務では稀。</strong> 公式ドキュメントでも「コンポーネントから <code>null</code> を返すのは一般的ではない」と説明されています。
+    たいていは、<strong>呼び出す側（親）</strong>で「表示するかどうか」を <code>{condition && &lt;Banner /&gt;}</code> のように判断する方が見通しが良いことが多いです。
+    ただし「子の都合で自分自身を消したい」場面では便利な手段として知っておきましょう。
+  </div>
+
+  <p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+  <!-- ============ 5 ============ -->
+  <h2 id="sec5"><span class="num">05</span>リストのレンダリング — 配列の <code>map()</code></h2>
+
+  <p>「同じ形のカードを、データの数だけ並べたい」——これがリストのレンダリングです。
+  Day03で学んだ配列メソッド <code>map()</code> が、ここでも主役になります。
+  <strong>「配列の each 要素を、JSX要素に変換する」</strong>のが基本パターンです。</p>
+
+  <pre><code><span class="c-key">const</span> people = [<span class="c-str">"創造性"</span>, <span class="c-str">"独立思考"</span>, <span class="c-str">"開拓心"</span>];
+
+<span class="c-key">function</span> <span class="c-tag">List</span>() {
+  <span class="c-key">const</span> listItems = people.map((person) =&gt;
+    <span class="c-tag">&lt;li&gt;</span>{person}<span class="c-tag">&lt;/li&gt;</span>
+  );
+  <span class="c-key">return</span> <span class="c-tag">&lt;ul&gt;</span>{listItems}<span class="c-tag">&lt;/ul&gt;</span>;
+}
+<span class="c-com">// 結果: &lt;ul&gt;&lt;li&gt;創造性&lt;/li&gt;&lt;li&gt;独立思考&lt;/li&gt;&lt;li&gt;開拓心&lt;/li&gt;&lt;/ul&gt;</span></code></pre>
+
+  <p>流れを分解すると、こうなります。</p>
+  <ol>
+    <li><strong>元データ</strong>（<code>people</code> という配列）を用意する。</li>
+    <li><code>map()</code> で配列の<strong>1要素ずつ</strong>をJSX（<code>&lt;li&gt;</code>）に変換し、<strong>新しい配列</strong>（<code>listItems</code>）を作る。</li>
+    <li>その配列を <code>{ }</code> でJSXの中に埋め込む。Reactは<strong>JSX要素の配列を、自動的に並べて表示</strong>してくれます。</li>
+  </ol>
+
+  <div class="box why">
+    <strong>JSXの中に直接 <code>{people.map(...)}</code> と書くこともできます。</strong> 変数 <code>listItems</code> を経由せず
+    <code>&lt;ul&gt;{people.map((p) =&gt; &lt;li&gt;{p}&lt;/li&gt;)}&lt;/ul&gt;</code> と1行で書く形も非常によく見かけます。意味は同じです。
+  </div>
+
+  <p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+  <!-- ============ 6 ============ -->
+  <h2 id="sec6"><span class="num">06</span>key — なぜ必要？ 何を入れる？</h2>
+
+  <p>上のコードをブラウザの開発者ツールで実際に動かすと、コンソールに
+  <strong><code>Warning: Each child in a list should have a unique "key" prop.</code></strong>（リストの各要素は一意な key を持つべき）という警告が出ます。
+  リストを作るときは、<strong>各要素に <code>key</code> という特別な props を付ける</strong>必要があります。</p>
+
+  <pre><code><span class="c-key">const</span> listItems = people.map((person) =&gt;
+  <span class="c-tag">&lt;li</span> key={person.id}<span class="c-tag">&gt;</span>{person.name}<span class="c-tag">&lt;/li&gt;</span>
+);</code></pre>
+
+  <h3>key は何のため？</h3>
+  <p>Reactは、リストの中の<strong>「どの要素が、前回のどの要素と同じものか」</strong>を、画面の見た目ではなく <code>key</code> の値で判断します。
+  これにより、配列の<strong>並び替え・追加・削除</strong>が起きたときに、<strong>変わっていない要素はそのまま使い、変わった要素だけ更新する</strong>という効率的な処理ができます。
+  （この「並び替えても正しく要素を追跡できる」仕組みについては、state を学ぶ Day08 以降でより実感できます。）</p>
+
+  <h3>何を key にすればいい？</h3>
+  <table>
+    <tr><th>候補</th><th>OK?</th><th>理由</th></tr>
+    <tr><td>データ自体が持つ一意なID（<code>user.id</code> など）</td><td>◎ 推奨</td><td>データベースなどから来る、変わらない一意な値だから</td></tr>
+    <tr><td>配列のindex（<code>map((p, index) =&gt; ...)</code> の index）</td><td>△ 非推奨</td><td>並び替え・追加・削除があると<strong>同じ要素なのにindexが変わる</strong>ため、Reactが要素を取り違える</td></tr>
+    <tr><td><code>Math.random()</code> など毎回変わる値</td><td>✕ NG</td><td>再描画ごとにkeyが変わり、Reactが毎回「全部新しい要素」と誤認する</td></tr>
+  </table>
+
+  <div class="box warn">
+    <strong>key はコンポーネントの中から見えない。</strong> <code>key</code> はReact自身が使う特別な情報なので、
+    <code>props.key</code> として子コンポーネントの中から読み取ることはできません。表示用の値が必要なら、別の名前（例: <code>id</code>）で改めて渡しましょう。
+  </div>
+
+  <p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+  <!-- ============ 7 ============ -->
+  <h2 id="sec7"><span class="num">07</span>純粋性（Purity）— コンポーネントは「純粋関数」</h2>
+
+  <p>ここまでで「条件によって表示を変える」「データから繰り返し表示を作る」を学びました。
+  最後に、その<strong>土台にある大原則</strong>を理解しておきましょう。Reactは、<strong>コンポーネントを「純粋関数」として書くこと</strong>を前提に設計されています。</p>
+
+  <div class="box note">
+    <strong>純粋関数（pure function）とは:</strong> 数学の関数のように、次の2つの性質を持つ関数です。
+    <ol style="margin:8px 0 0 18px;">
+      <li><strong>自分のことに集中する。</strong> 呼び出される前から存在していた、外側の変数やオブジェクトを変更しない。</li>
+      <li><strong>同じ入力には、いつも同じ出力。</strong> 同じ Props を渡せば、何度呼ばれても必ず同じJSXを返す。</li>
+    </ol>
+  </div>
+
+  <h3>NGな例: コンポーネントの外の変数を書き換えている</h3>
+  <pre><code><span class="c-key">let</span> guest = <span class="c-key">0</span>; <span class="c-com">// コンポーネントの外にある変数</span>
+
+<span class="c-key">function</span> <span class="c-tag">Cup</span>() {
+  guest = guest + <span class="c-key">1</span>; <span class="c-com">// ✕ NG: 外の変数を書き換えている（副作用）</span>
+  <span class="c-key">return</span> <span class="c-tag">&lt;h2&gt;</span>ゲスト# {guest} のお茶<span class="c-tag">&lt;/h2&gt;</span>;
+}</code></pre>
+
+  <p>これだと <code>Cup</code> は呼ばれるたびに違う結果を返してしまい、<strong>呼ばれる順番や回数</strong>によって表示が変わってしまいます。
+  これでは「同じ入力には同じ出力」という純粋性が崩れ、予測しづらく不安定なコンポーネントになります。</p>
+
+  <h3>OKな例: 必要な値を props として受け取る</h3>
+  <pre><code><span class="c-key">function</span> <span class="c-tag">Cup</span>({ <span class="c-key">guest</span> }) {
+  <span class="c-key">return</span> <span class="c-tag">&lt;h2&gt;</span>ゲスト# {guest} のお茶<span class="c-tag">&lt;/h2&gt;</span>;
+}
+
+<span class="c-key">function</span> <span class="c-tag">TeaSet</span>() {
+  <span class="c-key">return</span> (
+    <span class="c-tag">&lt;&gt;</span>
+      <span class="c-tag">&lt;Cup</span> guest={<span class="c-key">1</span>} <span class="c-tag">/&gt;</span>
+      <span class="c-tag">&lt;Cup</span> guest={<span class="c-key">2</span>} <span class="c-tag">/&gt;</span>
+      <span class="c-tag">&lt;Cup</span> guest={<span class="c-key">3</span>} <span class="c-tag">/&gt;</span>
+    <span class="c-tag">&lt;/&gt;</span>
+  );
+}</code></pre>
+
+  <p>こちらは <code>guest</code> という props だけを見て、いつも同じ結果を返します。外側の何かを書き換えていないので、何回呼ばれても・どの順番で呼ばれても安心です。</p>
+
+  <div class="box why">
+    <strong>なぜ純粋性が大事？</strong> Reactは<strong>パフォーマンスのために、同じコンポーネントを何度も呼んだり、呼ぶ順番を変えたりする</strong>ことがあります。
+    コンポーネントが純粋であれば、何度呼んでも・どの順で呼んでも結果は変わらないので、Reactは安心して最適化できます。
+    逆に不純（外の変数を書き換える等）だと、<strong>表示が呼び出し順に依存する不安定なバグ</strong>を生みます。
+  </div>
+
+  <div class="box note">
+    <strong>「画面の外で何かを起こす」のはダメじゃない。</strong> 画面に表示する以外の作用（ネットワーク通信、タイマー、コンソール出力など）を
+    「副作用（side effect）」と呼びます。これらはコンポーネントの<strong>描画そのもの</strong>の中ではなく、Day14で学ぶ <strong>Effect（useEffect）</strong> という専用の仕組みの中で行います。
+    「描画中は副作用を起こさない」が今回のポイントです。
+  </div>
+
+  <p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+  <!-- ============ 8 ============ -->
+  <h2 id="sec8"><span class="num">08</span>つまずきポイント早見表</h2>
+
+  <table>
+    <tr><th>症状</th><th>原因</th><th>直し方</th></tr>
+    <tr><td>JSXの中で <code>if</code> がエラーになる</td><td><code>if</code>は文（statement）でJSXの<code>{ }</code>には書けない</td><td>三項演算子か <code>&&</code> を使う、または早期returnでJSXの外に出す</td></tr>
+    <tr><td>画面にポツンと「0」が出る</td><td><code>{count && &lt;p&gt;...&lt;/p&gt;}</code> で count が 0</td><td><code>count &gt; 0 &&</code> のように真偽値にする</td></tr>
+    <tr><td>コンソールに key の警告が出る</td><td>map() した要素に <code>key</code> を付けていない</td><td>一意なID（できれば <code>item.id</code>）を <code>key=</code> に渡す</td></tr>
+    <tr><td>リストの並び替えで表示がおかしくなる</td><td><code>key</code> に配列のindexを使っている</td><td>データ自体の一意なIDを <code>key</code> にする</td></tr>
+    <tr><td>表示が呼ぶたびに変わって不安定</td><td>コンポーネントの中で外の変数を書き換えている（不純）</td><td>必要な値はすべて props として受け取る</td></tr>
+    <tr><td>何も表示されないはずの場所に何か出る</td><td><code>null</code>/<code>false</code>/<code>undefined</code> 以外（<code>0</code>や空文字以外の文字列など）を返している</td><td>「非表示にしたい」ときは <code>null</code> か、確実に false になる条件を使う</td></tr>
+  </table>
+
+  <p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+  <!-- ============ 9 / CTA ============ -->
+  <div class="cta" id="sec9">
+    <h2>09. さあ、手を動かそう 🚀</h2>
+    <p>解説を読んだら、いよいよ実践！ <strong><code>Day07/exercise.html</code> をブラウザで開いて</strong>演習に進みましょう。
+    各課題の合否（✅/❌）と表示プレビューが<strong>自動で</strong>出ます。未回答は「未回答」と表示されます。</p>
+    <p>今回は <strong>if・三項演算子・&&・null・map・key</strong> を実際に書いて確かめる課題です。
+    書けたらコードを貼ってください。良い点・改善点をレビューします（模範解答は出しません — 自分で気づくのが一番伸びます！）。</p>
+    <a class="btn" href="exercise.html">▶ 演習をはじめる</a>
+  </div>
+
+  <div class="cheer" style="text-align:center; margin-top:24px;">
+    条件分岐とリストが書けるようになると、Reactで「データに応じて変わる画面」が作れるようになります。📋<br>
+    残り半分、ここからさらに面白くなっていきます！
+  </div>
+
+  <p class="back"><a href="#top">▲ 目次に戻る</a></p>
+
+</div><!-- /wrap -->
+
+</body>
+</html>
