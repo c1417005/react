@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 09 — 演習: state のスナップショットと更新キュー</title>
+
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --paper:#f6efe2; --ink:#1d1a2b; --ink-soft:#4a4660;
+    --ember:#f04e2c; --ember-d:#c93a1c; --teal:#0e7c6b; --gold:#e8a200; --line:#e0d4bf; --card:#fffdf8;
+  }
+  * { box-sizing:border-box; }
+  body { font-family:"Zen Kaku Gothic New", system-ui, "Meiryo", sans-serif; line-height:1.85;
+    color:var(--ink); max-width:900px; margin:0 auto; padding:0 20px 90px;
+    background:
+      radial-gradient(900px 400px at 90% -5%, rgba(240,78,44,.06), transparent 60%),
+      var(--paper); }
+  .hero { margin:0 -20px 6px; padding:40px 26px 34px; color:#fdf6ea; border-radius:0 0 26px 26px;
+    background:
+      radial-gradient(500px 240px at 12% 0%, rgba(240,78,44,.5), transparent 60%),
+      linear-gradient(135deg,#211b33,#0f1f1d);
+    box-shadow:0 14px 36px rgba(27,24,48,.25); }
+  .hero .kicker { font-family:"JetBrains Mono",monospace; font-size:.72rem; letter-spacing:.2em;
+    color:#ffd9a8; text-transform:uppercase; }
+  .hero h1 { font-family:"Bricolage Grotesque","Zen Kaku Gothic New",sans-serif; font-weight:800;
+    margin:8px 0 6px; font-size:1.9rem; line-height:1.2; }
+  .hero h1 .pop { color:var(--ember); }
+  .hero p { margin:6px 0 0; color:#e7ddcf; }
+
+  .lead { background:#fef7e6; border-left:5px solid var(--gold); padding:12px 18px;
+    border-radius:0 10px 10px 0; margin:18px 0; }
+  .lead code { background:#efe2cf; }
+
+  h1 a, a { color:var(--ember-d); }
+  code { font-family:"JetBrains Mono",monospace; font-size:.86em; background:#efe2cf;
+    color:var(--ember-d); padding:2px 6px; border-radius:5px; }
+
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:16px 20px; margin:18px 0; box-shadow:0 6px 18px rgba(29,26,43,.05); }
+  .card h2 { margin:0 0 6px; font-size:1.12em; font-family:"Zen Kaku Gothic New",sans-serif;
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .status { font-weight:700; padding:3px 12px; border-radius:999px; font-size:.78em;
+    font-family:"JetBrains Mono",monospace; letter-spacing:.03em; }
+  .pass { background:#e3f6ec; color:#0b6b4f; border:1px solid #6bbf9a; }
+  .fail { background:#fdecec; color:#c93a1c; border:1px solid #e39b8a; }
+  .todo { background:#efe7d6; color:#6b6450; border:1px solid #cfc3aa; }
+  .desc { color:var(--ink-soft); font-size:.92em; }
+  .preview { border:1px dashed #c9bea6; border-radius:10px; padding:12px 16px; margin-top:12px;
+    background:#fffdf6; }
+  .preview-label { font-size:.74em; color:#9a8f76; margin-bottom:6px;
+    font-family:"JetBrains Mono",monospace; letter-spacing:.05em; }
+  pre { background:#1b1830; color:#f0bfae; padding:12px 14px; border-radius:10px; overflow-x:auto;
+    font-size:.82em; font-family:"JetBrains Mono",monospace; }
+  .hint { font-size:.86em; color:var(--ink-soft); margin-top:6px; }
+  #results { margin-top:6px; }
+
+  .preview button {
+    font-family:"Zen Kaku Gothic New",sans-serif; font-size:.9rem;
+    background:var(--ember); color:#fff; border:none; border-radius:8px;
+    padding:6px 16px; cursor:pointer; margin:3px 5px 3px 0;
+  }
+  .preview input {
+    font-family:"Zen Kaku Gothic New",sans-serif; font-size:.9rem;
+    border:1.5px solid var(--line); border-radius:8px; padding:5px 10px;
+    background:var(--paper); color:var(--ink);
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="kicker">◆ Day 09 — 演習</div>
+  <h1>スナップショットと<span class="pop">関数型更新</span>を書いてみよう</h1>
+  <p>値渡しと関数型更新の違いを手で書いて確かめる練習です。</p>
+</div>
+
+<div class="lead">
+  <strong>進め方:</strong> このファイル <code>Day09/exercise.html</code> をエディタで開き、各課題の
+  空欄を自分のコードに置き換えて <strong>保存 → ブラウザで再読み込み</strong>してください。
+  解説は <code>Day09/lesson.html</code>。模範解答は出しません。書けたらコードを貼ってレビューに出してください。
+</div>
+
+<div id="results"></div>
+
+<!-- ===================================================================
+     ここから下が「あなたが編集する場所」です。
+==================================================================== -->
+<script type="text/babel" data-presets="react">
+const { useState } = React;
+
+// =====================================================================
+//  演習（ここを編集します）
+// =====================================================================
+
+// --- 演習1（やさしい）: 関数型更新のカウンター -----------------------
+// カウンターを完成させてください。
+// ・useState で count を管理する（初期値は 0）。
+// ・「+1」ボタンをクリックするたびに count が 1 増える。
+//   ただし setCount(count + 1) ではなく、関数型更新を使うこと。
+//   → setCount(c => c + 1) の形で書いてください。
+// ・count の値を画面に表示する。
+function Exercise1() {
+  // ここにコードを書いてください
+  return <span data-unanswered="true"></span>;
+}
+
+
+// --- 演習2（やさしい）: 関数型トグル ---------------------------------
+// トグルを完成させてください。
+// ・useState で isOn（真偽値）を管理する（初期値は false）。
+// ・ボタンをクリックするたびに isOn が切り替わる。
+//   ただし setIsOn(!isOn) ではなく、関数型更新を使うこと。
+//   → setIsOn(v => !v) の形で書いてください。
+// ・isOn が true なら「オン」、false なら「オフ」と表示する。
+function Exercise2() {
+  // ここにコードを書いてください
+  return <span data-unanswered="true"></span>;
+}
+
+
+// --- 演習3（ふつう）: 1回のクリックで +3 ----------------------------
+// 1回のクリックで count が 3 増えるカウンターを完成させてください。
+// ・useState で count を管理する（初期値は 0）。
+// ・「+3」ボタンを1回クリックすると count が 3 増える。
+// ・onClick の中で setCount(c => c + 1) を 3 回呼んでください。
+//   （setCount(count + 1) を3回呼んでも 1 しか増えません。理由は lesson を参照。）
+// ・count の値を画面に表示する。
+function Exercise3() {
+  // ここにコードを書いてください
+  return <span data-unanswered="true"></span>;
+}
+
+
+// --- 演習4（ふつう）: +1 と +3 の両方を持つカウンター ---------------
+// 2種類のボタンを持つカウンターを完成させてください。
+// ・useState で count を管理する（初期値は 0）。
+// ・「+1」ボタン: count を 1 増やす（関数型更新）。
+// ・「+3」ボタン: count を 3 増やす（setCount(c => c + 1) を 3 回）。
+// ・「リセット」ボタン: count を 0 に戻す（これは setCount(0) でOK）。
+// ・count の値を画面に表示する。
+function Exercise4() {
+  // ここにコードを書いてください
+  return <span data-unanswered="true"></span>;
+}
+
+
+// --- 演習5（ちょいむず）: ダブルクリックで +2 ----------------------
+// ダブルクリックで count が 2 増えるカウンターを完成させてください。
+// ・useState で count を管理する（初期値は 0）。
+// ・通常クリック（onClick）: count を 1 増やす。
+// ・ダブルクリック（onDoubleClick）: count を 2 増やす。
+//   → ダブルクリックは onClick と onDoubleClick の両方が発火します。
+//     つまりダブルクリックすると +1（onClick） + 2（onDoubleClick） = +3 になってしまいます。
+//     これを防ぐため、onDoubleClick の中では setCount(c => c + 1) を 1 回だけ呼んでください。
+//     （ダブルクリックすると onClick の +1 と合わせて合計 +2 になります。）
+// ・count の値を表示する。
+// ・ヒント: <button onClick={...} onDoubleClick={...}>
+function Exercise5() {
+  // ここにコードを書いてください
+  return <span data-unanswered="true"></span>;
+}
+
+
+// =====================================================================
+//  採点ハーネス（ここから下は編集しません）
+// =====================================================================
+const norm = (s) => (s || "").replace(/\s+/g, " ").trim();
+
+function evaluate(Comp, interact) {
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  try {
+    const root = ReactDOM.createRoot(container);
+    ReactDOM.flushSync(() => root.render(React.createElement(Comp)));
+    const initial = { html: container.innerHTML, text: norm(container.textContent) };
+    let after = { ...initial };
+    if (interact) {
+      try { interact(container); }
+      catch (_) {}
+      after = { html: container.innerHTML, text: norm(container.textContent) };
+    }
+    root.unmount();
+    document.body.removeChild(container);
+    return { ok: true, initial, after };
+  } catch (e) {
+    try { document.body.removeChild(container); } catch (_) {}
+    return { ok: false, error: e.message };
+  }
+}
+
+const TASKS = [
+  {
+    n: 1,
+    title: "演習1: 関数型更新のカウンター",
+    desc: "初期表示は 0、ボタンをクリックすると 1 になる（関数型更新で）",
+    Comp: Exercise1,
+    interact: (c) => {
+      ReactDOM.flushSync(() => c.querySelector("button").click());
+    },
+    check: (r) => {
+      if (r.initial.html.includes('data-unanswered')) return null;
+      return r.initial.text.includes("0") && r.after.text.includes("1");
+    },
+  },
+  {
+    n: 2,
+    title: "演習2: 関数型トグル",
+    desc: "初期表示「オフ」→ クリックで「オン」に切り替わる（関数型更新で）",
+    Comp: Exercise2,
+    interact: (c) => {
+      ReactDOM.flushSync(() => c.querySelector("button").click());
+    },
+    check: (r) => {
+      if (r.initial.html.includes('data-unanswered')) return null;
+      return r.initial.text.includes("オフ") && r.after.text.includes("オン");
+    },
+  },
+  {
+    n: 3,
+    title: "演習3: 1回のクリックで +3",
+    desc: "ボタンを1回クリックすると count が 3 増える",
+    Comp: Exercise3,
+    interact: (c) => {
+      ReactDOM.flushSync(() => c.querySelector("button").click());
+    },
+    check: (r) => {
+      if (r.initial.html.includes('data-unanswered')) return null;
+      return r.initial.text.includes("0") && r.after.text.includes("3");
+    },
+  },
+  {
+    n: 4,
+    title: "演習4: +1 と +3 の両方を持つカウンター",
+    desc: "+3 ボタンを押すと 3 増え、リセットで 0 に戻る",
+    Comp: Exercise4,
+    interact: (c) => {
+      const plusThreeBtn = [...c.querySelectorAll("button")].find(
+        (b) => b.textContent.includes("+3") || b.textContent.includes("＋3")
+      );
+      if (plusThreeBtn) ReactDOM.flushSync(() => plusThreeBtn.click());
+    },
+    check: (r) => {
+      if (r.initial.html.includes('data-unanswered')) return null;
+      return r.initial.text.includes("0") && r.after.text.includes("3");
+    },
+  },
+  {
+    n: 5,
+    title: "演習5: ダブルクリックで +2",
+    desc: "クリックで +1、ダブルクリックで合計 +2 になる",
+    Comp: Exercise5,
+    interact: (c) => {
+      const btn = c.querySelector("button");
+      if (btn) {
+        ReactDOM.flushSync(() => btn.dispatchEvent(new MouseEvent("dblclick", { bubbles: true })));
+      }
+    },
+    check: (r) => {
+      if (r.initial.html.includes('data-unanswered')) return null;
+      return r.initial.text.includes("0") && r.after.text.includes("2");
+    },
+  },
+];
+
+function badge(kind, label) {
+  return `<span class="status ${kind}">${label}</span>`;
+}
+
+function run() {
+  const root = document.getElementById("results");
+  let html = "";
+  for (const t of TASKS) {
+    const r = evaluate(t.Comp, t.interact);
+    let status, previewHtml = "", note = "";
+
+    if (!r.ok) {
+      status = badge("fail", "エラー");
+      note = `<pre>${r.error}</pre>`;
+    } else if (r.initial.html.includes('data-unanswered="true"')) {
+      status = badge("todo", "未回答");
+    } else {
+      const result = t.check(r);
+      if (result === null) {
+        status = badge("todo", "未回答");
+      } else if (result) {
+        status = badge("pass", "✅ 合格");
+        previewHtml = r.after.html || r.initial.html || "<em>(表示なし)</em>";
+      } else {
+        status = badge("fail", "❌ もう少し");
+        previewHtml = r.after.html || r.initial.html || "<em>(表示なし)</em>";
+        note = `<div class="hint">初期表示テキスト: 「${r.initial.text}」<br>操作後テキスト: 「${r.after.text}」</div>`;
+      }
+    }
+
+    const preview = previewHtml
+      ? `<div class="preview"><div class="preview-label">▼ 実際の表示プレビュー（操作後）</div>${previewHtml}</div>`
+      : "";
+
+    html += `
+      <div class="card">
+        <h2>${t.title} ${status}</h2>
+        <div class="desc">目標: ${t.desc}</div>
+        ${preview}
+        ${note}
+      </div>`;
+  }
+  root.innerHTML = html;
+}
+
+run();
+</script>
+</body>
+</html>

@@ -112,7 +112,12 @@ const { useState } = React;
 // ・ヒント: const [count, setCount] = useState(0);
 function Exercise1() {
   // ここにコードを書いてください
-  return <span data-unanswered="true"></span>;
+  const [count,setCount] = useState(0);
+  return <> 
+  <button onClick={() => setCount(count + 1)}>増やす</button>
+  <p>{count}</p>
+  </>;
+
 }
 
 
@@ -124,6 +129,8 @@ function Exercise1() {
 // ・ヒント: setIsOn(!isOn) でトグルできます。
 function Exercise2() {
   // ここにコードを書いてください
+  const [isOn,setIson] = useState(false)
+  return <button onClick = {() => setIson(!isOn)}>{isOn ? "オン" : "オフ"}</button>
   return <span data-unanswered="true"></span>;
 }
 
@@ -138,9 +145,16 @@ function Exercise2() {
 // ・ヒント: e.target.value で入力値が取れます。
 function Exercise3() {
   // ここにコードを書いてください
-  return <span data-unanswered="true"></span>;
+  const[text,setText] = useState("")
+  return <div>
+    <input value={text} onChange={(e) => setText(e.target.value)}/>
+    
+    {text != "" ? <p>入力中: {text}</p> :null } 
+    </div>
+  
 }
-
+// e を受け取って、setTextにそれを渡して呼びだす、アロー関数を onChangeに渡す
+// この書き方は関数を呼ぶ、という関数なのでOK。さきにsetTextを呼んでしまうとレンダリングの際エラー
 
 // --- 演習4（ふつう）: +1 / −1 / リセットのカウンター ----------------
 // 3種類のボタンを持つカウンターを完成させてください。
@@ -151,6 +165,11 @@ function Exercise3() {
 // ・count の値を画面に表示する。
 function Exercise4() {
   // ここにコードを書いてください
+  const[count,setCount] = useState(0)
+  return <><button onClick = {() => setCount(count +=1)}> ＋1</button>
+  <button onClick = {() => setCount(count -=1)}> ー1</button>
+  <button onClick = {() => setCount(count =0)}> リセット</button>
+  <p>{count}</p></>
   return <span data-unanswered="true"></span>;
 }
 
@@ -166,12 +185,24 @@ function Exercise4() {
 // ・ヒント: setItems([...items, text]) で配列に追加できます。
 function Exercise5() {
   // ここにコードを書いてください
-  return <span data-unanswered="true"></span>;
+  const[text,setText] = useState("")
+  const[items,setItems] = useState([])
+  return <>
+  <input value = {text} onChange = {(e)=>setText(e.target.value)}></input>
+  <button onClick = {() => {setItems([...items,text]);
+    setText("");}}>追加</button>
+   <ul>{items.map((i) => <li key = {i}>{i}</li>)}</ul> 
+   </>
+
+
 }
+// ...items は「items の全要素を展開する」という意味です。[...items, text] で「今のリスト全部 ＋
+  // 新しいテキスト」の新しい配列が作られます。
 
 
 // --- 演習6（むず・総合）: 買い物リスト --------------------------------
 // 以下の機能を持つ買い物リストを完成させてください。
+
 //
 // ① テキスト入力と「追加」ボタン
 //    ・入力欄に商品名を入力 → 「追加」クリックでリストに追加
@@ -192,7 +223,20 @@ function Exercise5() {
 //        削除が簡単になります。
 function Exercise6() {
   // ここにコードを書いてください
-  return <span data-unanswered="true"></span>;
+  const[text,setText] = useState("")
+const[items,setItems] = useState([])
+  return <>
+  <input value = {text} onChange = {(e) => setText(e.target.value)}></input>
+  <button onClick = {
+    () => { if (text) {
+      setItems([...items,{id:Date.now(),name:text}]);
+      setText("");
+    }
+  }}>
+  追加</button>
+  <ul>{items.map((item) => <li key ={item.id}>{item.name}{<button onClick = {() => setItems(items.filter((i) => i.id !== item.id))}>削除</button>}</li>)}</ul>
+  <p>{items.length ? ("残り "+items.length+" 件です") : "リストは空です"}</p>
+  </>
 }
 
 

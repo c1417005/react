@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 09 — state のスナップショットと更新キュー</title>
+
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --paper:   #f6efe2;
+    --paper-2: #efe5d3;
+    --ink:     #1d1a2b;
+    --ink-soft:#4a4660;
+    --ember:   #f04e2c;
+    --ember-d: #c93a1c;
+    --teal:    #0e7c6b;
+    --gold:    #e8a200;
+    --line:    #e0d4bf;
+    --card:    #fffdf8;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: "Zen Kaku Gothic New", system-ui, "Hiragino Sans", "Meiryo", sans-serif;
+    line-height: 1.95; color: var(--ink);
+    margin: 0; padding: 0 0 100px;
+    background:
+      radial-gradient(1200px 500px at 80% -10%, rgba(240,78,44,.07), transparent 60%),
+      radial-gradient(900px 500px at -10% 20%, rgba(14,124,107,.06), transparent 55%),
+      var(--paper);
+    background-attachment: fixed;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 0 22px; }
+
+  /* ===== ヒーロー ===== */
+  .hero {
+    position: relative; overflow: hidden; color: #fdf6ea;
+    background:
+      radial-gradient(600px 300px at 15% 10%, rgba(240,78,44,.55), transparent 60%),
+      radial-gradient(700px 360px at 90% 80%, rgba(14,124,107,.45), transparent 60%),
+      linear-gradient(135deg, #211b33 0%, #161226 55%, #0f1f1d 100%);
+    padding: 70px 22px 78px;
+  }
+  .hero::after {
+    content:""; position:absolute; inset:0; opacity:.5; pointer-events:none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.05'/%3E%3C/svg%3E");
+  }
+  .hero-inner { max-width: 880px; margin: 0 auto; position: relative; z-index: 1; }
+  .kicker {
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:"JetBrains Mono", monospace; font-size:.74rem; letter-spacing:.22em;
+    text-transform:uppercase; color:#ffd9a8;
+    border:1px solid rgba(255,217,168,.35); border-radius:999px; padding:6px 14px;
+    background:rgba(255,217,168,.08);
+    animation: rise .7s .05s both;
+  }
+  .hero h1 {
+    font-family:"Bricolage Grotesque", "Zen Kaku Gothic New", sans-serif;
+    font-weight:800; font-size: clamp(2.1rem, 6vw, 3.4rem); line-height:1.08;
+    margin:18px 0 14px; letter-spacing:-.01em;
+    animation: rise .7s .15s both;
+  }
+  .hero h1 .pop { color: var(--ember); text-shadow: 0 0 30px rgba(240,78,44,.45); }
+  .hero .lead { max-width: 620px; color:#e7ddcf; font-size:1.06rem; animation: rise .7s .27s both; }
+  .hero .meta { margin-top:26px; display:flex; flex-wrap:wrap; gap:10px; animation: rise .7s .4s both; }
+  .chip { font-family:"JetBrains Mono", monospace; font-size:.78rem;
+    background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.16);
+    color:#f3ead9; padding:6px 12px; border-radius:8px; }
+  .chip b { color: var(--gold); }
+
+  /* スナップショット図 */
+  .snap-diagram { margin-top:36px; display:flex; flex-direction:column; gap:10px;
+    animation: rise .8s .5s both; }
+  .snap-row { display:flex; align-items:center; gap:10px; }
+  .snap-box { border-radius:12px; padding:10px 16px; border:1px solid rgba(255,255,255,.2);
+    font-family:"JetBrains Mono",monospace; font-size:.85rem; backdrop-filter:blur(2px); }
+  .snap-box.render { background:rgba(14,124,107,.3); color:#a8f0dc; }
+  .snap-box.state  { background:rgba(240,78,44,.3);  color:#ffd0c2; }
+  .snap-box.jsx    { background:rgba(232,162,0,.25); color:#ffe0a0; }
+  .snap-arrow { color:#ffd9a8; font-size:1.1rem; }
+
+  @keyframes rise { from{ opacity:0; transform:translateY(16px);} to{ opacity:1; transform:none;} }
+
+  /* ===== 進捗バー ===== */
+  .progress { margin:30px 0 6px; }
+  .progress .label { display:flex; justify-content:space-between;
+    font-family:"JetBrains Mono",monospace; font-size:.74rem; color:var(--ink-soft);
+    letter-spacing:.08em; margin-bottom:7px; }
+  .bar { height:11px; border-radius:999px; background:var(--paper-2);
+    border:1px solid var(--line); overflow:hidden; }
+  .bar > span { display:block; height:100%; width:64%;
+    background:linear-gradient(90deg, var(--ember), var(--gold));
+    border-radius:999px; box-shadow:0 0 12px rgba(240,78,44,.5); }
+
+  /* ===== 見出し ===== */
+  h2 {
+    font-family:"Bricolage Grotesque","Zen Kaku Gothic New",sans-serif; font-weight:700;
+    font-size:1.5rem; margin:58px 0 6px; padding-bottom:10px; scroll-margin-top:14px;
+    border-bottom:2px solid var(--line); position:relative;
+  }
+  h2 .num { font-family:"JetBrains Mono",monospace; color:var(--ember);
+    font-size:1rem; margin-right:12px; vertical-align:2px; }
+  h3 { font-family:"Zen Kaku Gothic New",sans-serif; font-weight:700; color:var(--teal);
+    font-size:1.12rem; margin:28px 0 4px; }
+  h3::before { content:"◆"; color:var(--ember); font-size:.7em; margin-right:8px; vertical-align:2px; }
+  p { margin:12px 0; }
+
+  /* ===== コード ===== */
+  code { font-family:"JetBrains Mono",monospace; font-size:.86em;
+    background:#efe2cf; color:var(--ember-d); padding:2px 6px; border-radius:5px; }
+  pre {
+    background:#1b1830; color:#e9e3d4; border-radius:14px; padding:20px 20px 18px;
+    overflow-x:auto; line-height:1.7; font-size:.86rem; position:relative;
+    border:1px solid #2c2745; box-shadow:0 16px 34px rgba(27,24,48,.22);
+    margin:18px 0;
+  }
+  pre::before { content:"JSX"; position:absolute; top:9px; right:14px;
+    font-family:"JetBrains Mono",monospace; font-size:.65rem; letter-spacing:.18em; color:#6a6390; }
+  pre.js::before { content:"JS"; }
+  pre code { background:none; color:inherit; padding:0; font-size:.92em; }
+  .c-key { color:#ff9d7a; }
+  .c-com { color:#7d769c; font-style:italic; }
+  .c-str { color:#9fe3b0; }
+  .c-tag { color:#7fd6ff; }
+  .c-fn  { color:#c9b8ff; }
+  .c-num { color:#f0c37a; }
+
+  /* ===== 注記ボックス ===== */
+  .box { border-radius:0 12px 12px 0; padding:14px 18px; margin:18px 0;
+    background:var(--card); border-left:5px solid var(--line); }
+  .note { border-left-color:var(--gold);  background:#fef7e6; }
+  .why  { border-left-color:var(--teal);  background:#e9f6f2; }
+  .warn { border-left-color:var(--ember); background:#fdeee8; }
+  .box strong { color:var(--ink); }
+
+  /* 励まし */
+  .cheer { margin:24px 0; padding:18px 22px; border-radius:16px; font-weight:700;
+    color:#5a2415; background:linear-gradient(135deg,#ffe9c9,#ffd9c2);
+    border:1px solid #f3c39e; box-shadow:0 8px 22px rgba(240,78,44,.12); }
+  .cheer .big { font-family:"Bricolage Grotesque",sans-serif; font-size:1.1rem; }
+
+  /* 目次 */
+  .toc { background:var(--card); border:1px solid var(--line); border-radius:18px;
+    padding:20px 26px; box-shadow:0 10px 28px rgba(29,26,43,.06); margin:26px 0; }
+  .toc strong { font-family:"Bricolage Grotesque",sans-serif; font-size:1.05rem; color:var(--ember-d); }
+  .toc ol { margin:12px 0 2px; padding-left:20px; }
+  .toc li { margin:5px 0; }
+  .toc a { color:var(--ink); text-decoration:none; border-bottom:1px solid transparent; }
+  .toc a:hover { color:var(--ember-d); border-bottom-color:var(--ember); }
+
+  /* テーブル */
+  table { border-collapse:collapse; width:100%; margin:18px 0; background:var(--card);
+    border-radius:12px; overflow:hidden; box-shadow:0 6px 18px rgba(29,26,43,.06); font-size:.95rem; }
+  th,td { border:1px solid var(--line); padding:10px 14px; text-align:left; vertical-align:top; }
+  th { background:linear-gradient(135deg,var(--ink),#2e2a47); color:#f6efe2; border-color:rgba(255,255,255,.15);
+    font-family:"Zen Kaku Gothic New",sans-serif; }
+  tr:nth-child(even) td { background:#faf4e9; }
+
+  /* 戻るリンク */
+  .back { text-align:right; margin:10px 0 0; }
+  .back a { font-family:"JetBrains Mono",monospace; font-size:.74rem; text-decoration:none;
+    color:var(--ink-soft); border:1px solid var(--line); border-radius:999px; padding:4px 14px;
+    background:var(--card); transition:.18s; }
+  .back a:hover { background:var(--ink); color:var(--paper); border-color:var(--ink); }
+  a { color:var(--ember-d); }
+
+  /* ライブデモ */
+  .demo { background:#fff8f0; border:1.5px solid #f3c39e; border-radius:14px;
+    padding:18px 20px; margin:22px 0; }
+  .demo-label { font-family:"JetBrains Mono",monospace; font-size:.7rem; letter-spacing:.15em;
+    text-transform:uppercase; color:#9a5530; margin-bottom:12px; }
+  .demo-inner { background:var(--card); border:1px solid var(--line); border-radius:10px;
+    padding:14px 18px; min-height:60px; }
+  .demo-inner button {
+    font-family:"Zen Kaku Gothic New",sans-serif; font-size:.9rem;
+    background:var(--ember); color:#fff; border:none; border-radius:8px;
+    padding:7px 18px; cursor:pointer; margin:4px 6px 4px 0; transition:.15s;
+  }
+  .demo-inner button:hover { background:var(--ember-d); }
+  .demo-inner p { margin:10px 0 0; font-size:.95rem; }
+  .demo-inner .count { font-family:"Bricolage Grotesque",sans-serif; font-weight:700;
+    font-size:2.2rem; color:var(--ember); line-height:1; }
+
+  /* NG/OK 比較 */
+  .compare { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:18px 0; }
+  .compare > div { border-radius:12px; overflow:hidden; }
+  .compare .cap { font-family:"JetBrains Mono",monospace; font-size:.7rem; letter-spacing:.1em;
+    padding:6px 14px; font-weight:700; }
+  .ng .cap { background:#fdecec; color:#c93a1c; }
+  .ok .cap { background:#e3f6ec; color:#0b6b4f; }
+  .compare pre { margin:0; border-radius:0; box-shadow:none; }
+  @media(max-width:580px){ .compare { grid-template-columns:1fr; } }
+
+  /* キュー図 */
+  .queue-diagram { display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+    margin:18px 0; padding:16px 20px; background:var(--card);
+    border:1px solid var(--line); border-radius:14px; }
+  .q-item { background:#1b1830; color:#f0c37a; font-family:"JetBrains Mono",monospace;
+    font-size:.82rem; padding:6px 12px; border-radius:8px; }
+  .q-arrow { color:var(--ink-soft); font-size:1.1rem; }
+  .q-result { background:linear-gradient(135deg,var(--ember),var(--gold));
+    color:#fff; font-family:"Bricolage Grotesque",sans-serif; font-weight:700;
+    font-size:1rem; padding:6px 16px; border-radius:8px; }
+</style>
+</head>
+<body>
+
+<!-- ===== ヒーロー ===== -->
+<div class="hero">
+  <div class="hero-inner">
+    <div class="kicker">◆ Day 09 / 14</div>
+    <h1>state は<span class="pop">スナップショット</span><br>更新キューを使いこなそう</h1>
+    <p class="lead">「なぜ3回 setState を呼んでも1しか増えないの？」その謎を解くのが今日のテーマです。state の動き方を正しく理解すると、React のバグが格段に減ります。</p>
+
+    <div class="snap-diagram">
+      <div class="snap-row">
+        <div class="snap-box render">レンダリング開始</div>
+        <div class="snap-arrow">→</div>
+        <div class="snap-box state">count = 0（スナップショット）</div>
+      </div>
+      <div class="snap-row">
+        <div class="snap-box jsx">JSX を返す（この時点の 0 を使う）</div>
+        <div class="snap-arrow">→</div>
+        <div class="snap-box render">画面に表示</div>
+      </div>
+    </div>
+
+    <div class="meta">
+      <span class="chip">📸 <b>スナップショット</b></span>
+      <span class="chip">📋 <b>更新キュー</b></span>
+      <span class="chip">⚡ <b>関数型更新</b></span>
+      <span class="chip">🔢 <b>バッチ処理</b></span>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- 進捗バー -->
+  <div class="progress">
+    <div class="label"><span>Day 09 / 14</span><span>64%</span></div>
+    <div class="bar"><span></span></div>
+  </div>
+
+  <!-- 目次 -->
+  <div class="toc" id="top">
+    <strong>目次</strong>
+    <ol>
+      <li><a href="#s1">state はスナップショット</a></li>
+      <li><a href="#s2">同じ setState を何度呼んでも1回しか増えない理由</a></li>
+      <li><a href="#s3">バッチ処理（React がまとめて処理する）</a></li>
+      <li><a href="#s4">関数型更新（updater function）</a></li>
+      <li><a href="#s5">通常の更新 vs 関数型更新 — 使い分け</a></li>
+      <li><a href="#s6">まとめ</a></li>
+    </ol>
+  </div>
+
+  <!-- ===================================================== -->
+  <h2 id="s1"><span class="num">01</span>state はスナップショット</h2>
+
+  <p>「スナップショット」とは写真のことです。写真は撮った瞬間の状態を切り取ったものであり、その後に被写体が動いても写真は変わりません。React の state も同じです。</p>
+
+  <p><strong>レンダリングが始まった瞬間、React はそのときの state の値を「写真に撮って」固定します。</strong> イベントハンドラーの中でどれだけ state を読んでも、その「写真」の値が返ってきます。</p>
+
+  <div class="box note">
+    <strong>レンダリングとは何か</strong><br>
+    React がコンポーネント関数（<code>function Counter() { ... }</code>）を呼び出して JSX を作る作業のことです。ボタンをクリックして setState が呼ばれると、React は次のレンダリングをスケジュールし、次の呼び出しで新しい JSX が作られます。
+  </div>
+
+  <h3>コードで確認する</h3>
+
+  <pre><code><span class="c-key">function</span> <span class="c-fn">Counter</span>() {
+  <span class="c-key">const</span> [count, setCount] = useState(<span class="c-num">0</span>);
+
+  <span class="c-key">function</span> <span class="c-fn">handleClick</span>() {
+    <span class="c-com">// ここで count は「このレンダリング時点」の値（例: 0）で固定されている</span>
+    console.log(count); <span class="c-com">// → 0</span>
+    setCount(count + <span class="c-num">1</span>);
+    console.log(count); <span class="c-com">// → 0（まだ変わっていない！）</span>
+    setCount(count + <span class="c-num">1</span>);
+    console.log(count); <span class="c-com">// → 0（やっぱり 0）</span>
+  }
+
+  <span class="c-key">return</span> (
+    <span class="c-tag">&lt;button</span> onClick={handleClick}&gt;
+      count = {count}
+    <span class="c-tag">&lt;/button&gt;</span>
+  );
+}</code></pre>
+
+  <p>上のコードで「増やす」ボタンを押すと、count は <strong>2 ではなく 1 しか増えません</strong>。なぜなら:</p>
+
+  <ul>
+    <li>このレンダリングでは <code>count</code> は <code>0</code> として固定されている</li>
+    <li><code>setCount(count + 1)</code> は <code>setCount(0 + 1)</code> つまり <code>setCount(1)</code> と同じ</li>
+    <li>何度呼んでも「次のレンダリングで count を 1 にしてください」という命令が並ぶだけ</li>
+  </ul>
+
+  <div class="box warn">
+    <strong>setCount は「今すぐ count を変える」関数ではない</strong><br>
+    setCount は「次のレンダリング時に使う値をリクエストする」関数です。呼んだ直後に count を読んでも、値は変わっていません。
+  </div>
+
+  <h3>ライブデモ — ボタンを押しても +1 しか増えない例</h3>
+
+  <div class="demo">
+    <div class="demo-label">▶ LIVE DEMO — スナップショットの確認</div>
+    <div class="demo-inner" id="demo1"></div>
+  </div>
+
+  <div class="back"><a href="#top">↑ 目次に戻る</a></div>
+
+  <!-- ===================================================== -->
+  <h2 id="s2"><span class="num">02</span>同じ setState を何度呼んでも1回しか増えない理由</h2>
+
+  <p>前のセクションの例を図で整理します。ボタンをクリックしたとき React の中で何が起きているかを追いかけてみましょう。</p>
+
+  <p><strong>初期状態: count = 0</strong></p>
+
+  <p>ボタンをクリック → <code>handleClick</code> が実行される：</p>
+
+  <table>
+    <tr><th>実行される行</th><th>React が受け取る命令</th><th>count の値（このレンダリング）</th></tr>
+    <tr><td><code>setCount(count + 1)</code></td><td>「次は 1 にして」</td><td>0（変わらない）</td></tr>
+    <tr><td><code>setCount(count + 1)</code></td><td>「次は 1 にして」（同じ！）</td><td>0（変わらない）</td></tr>
+    <tr><td><code>setCount(count + 1)</code></td><td>「次は 1 にして」（同じ！）</td><td>0（変わらない）</td></tr>
+  </table>
+
+  <p>3回とも <code>count + 1</code> は <code>0 + 1 = 1</code> なので、「次は 1 にして」という命令が3回届くだけです。結果: 次のレンダリングで count は <strong>1</strong>。</p>
+
+  <div class="box why">
+    <strong>なぜこの仕組みにしているのか</strong><br>
+    1回のクリックの中で state が途中で変わると、「途中の状態」でコンポーネントが混乱します。React は1回のイベントが終わるまで state を固定することで、処理を安定させています。これを<strong>「state の一貫性」</strong>と呼びます。
+  </div>
+
+  <div class="back"><a href="#top">↑ 目次に戻る</a></div>
+
+  <!-- ===================================================== -->
+  <h2 id="s3"><span class="num">03</span>バッチ処理（React がまとめて処理する）</h2>
+
+  <p><strong>バッチ（batch）</strong> とは「まとめる」という意味です。React は1つのイベントハンドラーの中で複数の setState が呼ばれても、<strong>すべての setState が終わってから、まとめて1回だけ再レンダリングします</strong>。</p>
+
+  <pre><code><span class="c-key">function</span> <span class="c-fn">handleClick</span>() {
+  setCount(count + <span class="c-num">1</span>);  <span class="c-com">// ① リクエストをためる</span>
+  setIsOn(!isOn);          <span class="c-com">// ② リクエストをためる</span>
+  setText(<span class="c-str">"hello"</span>);       <span class="c-com">// ③ リクエストをためる</span>
+  <span class="c-com">// ④ ここで全部まとめて再レンダリング（1回だけ）</span>
+}</code></pre>
+
+  <p>これを <strong>バッチ処理</strong> といいます。バッチ処理のおかげで、「途中の中途半端な状態」が画面に表示されることがなく、パフォーマンスも良くなります。</p>
+
+  <div class="box note">
+    <strong>React 18 からは「自動バッチ」が強化された</strong><br>
+    React 18 より前は、イベントハンドラーの中だけバッチ処理されていました。React 18 からは <code>setTimeout</code> や <code>fetch</code> の中でも自動的にバッチ処理されるようになりました。今は「React は基本的にまとめて処理する」と覚えておけば大丈夫です。
+  </div>
+
+  <div class="back"><a href="#top">↑ 目次に戻る</a></div>
+
+  <!-- ===================================================== -->
+  <h2 id="s4"><span class="num">04</span>関数型更新（updater function）</h2>
+
+  <p>では「本当に count を3増やしたい」とき、どうすればよいでしょうか。答えは <strong>関数型更新</strong> です。</p>
+
+  <p>setState に値ではなく <strong>関数</strong> を渡すと、React は「前の state の値（最新のもの）」をその関数の引数に渡してくれます。</p>
+
+  <div class="compare">
+    <div class="ng">
+      <div class="cap">❌ 値を渡す（スナップショットを使う）</div>
+      <pre><code><span class="c-com">// count が 0 の場合</span>
+setCount(count + <span class="c-num">1</span>); <span class="c-com">// → 1 にして</span>
+setCount(count + <span class="c-num">1</span>); <span class="c-com">// → 1 にして（同じ）</span>
+setCount(count + <span class="c-num">1</span>); <span class="c-com">// → 1 にして（同じ）</span>
+<span class="c-com">// 結果: count = 1</span></code></pre>
+    </div>
+    <div class="ok">
+      <div class="cap">✅ 関数を渡す（最新値を使う）</div>
+      <pre><code><span class="c-com">// c には「前の値」が入ってくる</span>
+setCount(c => c + <span class="c-num">1</span>); <span class="c-com">// c=0 → 1 にして</span>
+setCount(c => c + <span class="c-num">1</span>); <span class="c-com">// c=1 → 2 にして</span>
+setCount(c => c + <span class="c-num">1</span>); <span class="c-com">// c=2 → 3 にして</span>
+<span class="c-com">// 結果: count = 3</span></code></pre>
+    </div>
+  </div>
+
+  <p><code>c => c + 1</code> の <code>c</code> はアロー関数の引数で、React が「前の値」を入れてくれます。変数名は何でも構いません（<code>prev</code>、<code>n</code>、<code>prevCount</code> など）。慣習として短い名前がよく使われます。</p>
+
+  <h3>更新キューの仕組み</h3>
+
+  <p>関数型更新を使うと、React は「更新キュー」に関数を積みます。キューとは「先入れ先出し」の順番待ちのことです。</p>
+
+  <div class="queue-diagram">
+    <div class="q-item">c => c+1</div>
+    <div class="q-arrow">→</div>
+    <div class="q-item">c => c+1</div>
+    <div class="q-arrow">→</div>
+    <div class="q-item">c => c+1</div>
+    <div class="q-arrow">→</div>
+    <div class="q-result">count = 3</div>
+  </div>
+
+  <p>React はキューの関数を順番に実行し、前の関数の結果を次の関数の <code>c</code> に渡します。これにより3回分が正しく積み上がります。</p>
+
+  <h3>ライブデモ — 値渡し vs 関数型更新</h3>
+
+  <div class="demo">
+    <div class="demo-label">▶ LIVE DEMO — +3 ボタンの比較</div>
+    <div class="demo-inner" id="demo2"></div>
+  </div>
+
+  <div class="back"><a href="#top">↑ 目次に戻る</a></div>
+
+  <!-- ===================================================== -->
+  <h2 id="s5"><span class="num">05</span>通常の更新 vs 関数型更新 — 使い分け</h2>
+
+  <p>どちらを使えばよいのか、判断基準をまとめます。</p>
+
+  <table>
+    <tr><th>状況</th><th>使う書き方</th><th>理由</th></tr>
+    <tr>
+      <td>単純に値をセットする（入力値、トグルなど）</td>
+      <td><code>setValue(newValue)</code></td>
+      <td>前の値に依存しないので通常の書き方でよい</td>
+    </tr>
+    <tr>
+      <td>前の値を基に計算する（カウンター、配列への追加など）</td>
+      <td><code>setValue(v => v + 1)</code></td>
+      <td>前の値が確実に最新のものになる</td>
+    </tr>
+    <tr>
+      <td>1つのイベントで同じ state を複数回更新する</td>
+      <td><code>setValue(v => v + 1)</code></td>
+      <td>スナップショット問題を避けるため</td>
+    </tr>
+  </table>
+
+  <div class="box note">
+    <strong>迷ったら関数型更新を使えばほぼ安全です</strong><br>
+    「前の値に依存していないのに関数型更新を使っても問題はない」という判断で、関数型更新を基本にするスタイルも一般的です。Day 08 で書いたカウンターコードも <code>setCount(c => c + 1)</code> の方が厳密には正しいです。
+  </div>
+
+  <h3>トグルでの例</h3>
+
+  <div class="compare">
+    <div class="ok">
+      <div class="cap">✅ どちらでも動く（値渡し）</div>
+      <pre><code><span class="c-com">// isOn のスナップショットを使う</span>
+setIsOn(!isOn)</code></pre>
+    </div>
+    <div class="ok">
+      <div class="cap">✅ より安全（関数型更新）</div>
+      <pre><code><span class="c-com">// 必ず前の値を反転させる</span>
+setIsOn(v => !v)</code></pre>
+    </div>
+  </div>
+
+  <div class="back"><a href="#top">↑ 目次に戻る</a></div>
+
+  <!-- ===================================================== -->
+  <h2 id="s6"><span class="num">06</span>まとめ</h2>
+
+  <table>
+    <tr><th>概念</th><th>ひとことで</th></tr>
+    <tr><td>スナップショット</td><td>レンダリング時点の state の値は固定。イベントハンドラー内で変わらない</td></tr>
+    <tr><td>バッチ処理</td><td>1つのイベント内の setState は全部まとめてから1回だけ再レンダリングされる</td></tr>
+    <tr><td>関数型更新</td><td><code>setState(v => v + 1)</code> で「前の値」を確実に受け取って計算できる</td></tr>
+    <tr><td>更新キュー</td><td>関数型更新を積み重ねると、React が順番に実行してくれる</td></tr>
+  </table>
+
+  <div class="cheer">
+    <div class="big">今日の核心は「setStateは次のレンダリングへのリクエスト」という1文です。</div>
+    これが腑に落ちると、React のバグの多くが「あ、スナップショットの問題だ」と瞬時にわかるようになります。演習で手を動かして確認しましょう！
+  </div>
+
+  <p>次は <code>Day09/exercise.html</code> を開いて演習に取り組んでください。</p>
+
+</div><!-- /wrap -->
+
+<!-- ===== ライブデモ ===== -->
+<script type="text/babel" data-presets="react">
+const { useState } = React;
+
+// デモ1: スナップショットの確認（3回 setCount しても +1 しか増えない）
+function Demo1() {
+  const [count, setCount] = useState(0);
+  function handleClick() {
+    setCount(count + 1);
+    setCount(count + 1);
+    setCount(count + 1);
+  }
+  return (
+    <div>
+      <div className="count">{count}</div>
+      <button onClick={handleClick}>+3 のつもりで押す</button>
+      <p style={{fontSize:'.85rem',color:'#666',marginTop:'8px'}}>
+        実際には +1 しか増えません（スナップショットの例）
+      </p>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById("demo1")).render(<Demo1 />);
+
+// デモ2: 値渡し vs 関数型更新
+function Demo2() {
+  const [countA, setCountA] = useState(0);
+  const [countB, setCountB] = useState(0);
+  return (
+    <div style={{display:'flex', gap:'32px', flexWrap:'wrap'}}>
+      <div>
+        <div style={{fontSize:'.78rem',color:'#888',fontFamily:'monospace',marginBottom:'4px'}}>値渡し: setCount(count + 1) × 3</div>
+        <div className="count">{countA}</div>
+        <button onClick={() => { setCountA(countA+1); setCountA(countA+1); setCountA(countA+1); }}>
+          +3（実際は+1）
+        </button>
+      </div>
+      <div>
+        <div style={{fontSize:'.78rem',color:'#888',fontFamily:'monospace',marginBottom:'4px'}}>関数型: setCount(c =&gt; c + 1) × 3</div>
+        <div className="count">{countB}</div>
+        <button onClick={() => { setCountB(c=>c+1); setCountB(c=>c+1); setCountB(c=>c+1); }}>
+          +3（本当に+3）
+        </button>
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById("demo2")).render(<Demo2 />);
+</script>
+</body>
+</html>
